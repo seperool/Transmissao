@@ -1,0 +1,151 @@
+<TransmissaoScreen>:
+    FloatLayout:
+
+        Image:
+            source: 'fundo.jpg'
+            allow_stretch: True
+            keep_ratio: False
+            size: self.parent.size
+            pos: self.parent.pos
+            opacity: 0.25  # fundo com transparência para destacar o texto
+
+        BoxLayout:
+            orientation: 'vertical'
+            padding: 20
+            spacing: 10
+            size: self.parent.size
+            pos: self.parent.pos
+
+            ScrollView:
+                size_hint_y: 0.8
+
+                GridLayout:
+                    id: grid
+                    cols: 2
+                    size_hint_y: None
+                    height: self.minimum_height
+                    row_default_height: 40
+                    spacing: 10
+
+                    Label:
+                        text: "ra (Ohms):"
+                        color: 1, 1, 1, 1  # branco
+                    TextInput:
+                        id: input_ra
+                        text: "0.1"
+                        foreground_color: 1, 1, 1, 1  # texto branco
+                        background_color: 0, 0, 0, 0.5  # fundo semitransparente escuro
+                        multiline: False
+
+                    Label:
+                        text: "rb (Ohms):"
+                        color: 1, 1, 1, 1
+                    TextInput:
+                        id: input_rb
+                        text: "0.1"
+                        foreground_color: 1, 1, 1, 1
+                        background_color: 0, 0, 0, 0.5
+                        multiline: False
+
+                    Label:
+                        text: "rc (Ohms):"
+                        color: 1, 1, 1, 1
+                    TextInput:
+                        id: input_rc
+                        text: "0.1"
+                        foreground_color: 1, 1, 1, 1
+                        background_color: 0, 0, 0, 0.5
+                        multiline: False
+
+                    Label:
+                        text: "rmga (m):"
+                        color: 1, 1, 1, 1
+                    TextInput:
+                        id: input_rmga
+                        text: "0.15"
+                        foreground_color: 1, 1, 1, 1
+                        background_color: 0, 0, 0, 0.5
+                        multiline: False
+
+                    Label:
+                        text: "rmgb (m):"
+                        color: 1, 1, 1, 1
+                    TextInput:
+                        id: input_rmgb
+                        text: "0.15"
+                        foreground_color: 1, 1, 1, 1
+                        background_color: 0, 0, 0, 0.5
+                        multiline: False
+
+                    Label:
+                        text: "rmgc (m):"
+                        color: 1, 1, 1, 1
+                    TextInput:
+                        id: input_rmgc
+                        text: "0.15"
+                        foreground_color: 1, 1, 1, 1
+                        background_color: 0, 0, 0, 0.5
+                        multiline: False
+
+                    Label:
+                        text: "Frequência (Hz):"
+                        color: 1, 1, 1, 1
+                    TextInput:
+                        id: input_f
+                        text: "60"
+                        foreground_color: 1, 1, 1, 1
+                        background_color: 0, 0, 0, 0.5
+                        multiline: False
+
+                    Label:
+                        text: "Altura ha (m):"
+                        color: 1, 1, 1, 1
+                    TextInput:
+                        id: input_ha
+                        text: "20"
+                        foreground_color: 1, 1, 1, 1
+                        background_color: 0, 0, 0, 0.5
+                        multiline: False
+
+                    Label:
+                        text: "Altura hb (m):"
+                        color: 1, 1, 1, 1
+                    TextInput:
+                        id: input_hb
+                        text: "30"
+                        foreground_color: 1, 1, 1, 1
+                        background_color: 0, 0, 0, 0.5
+                        multiline: False
+
+                    Label:
+                        text: "Altura hc (m):"
+                        color: 1, 1, 1, 1
+                    TextInput:
+                        id: input_hc
+                        text: "20"
+                        foreground_color: 1, 1, 1, 1
+                        background_color: 0, 0, 0, 0.5
+                        multiline: False
+
+            BoxLayout:
+                size_hint_y: None
+                height: 50
+                spacing: 10
+
+                Button:
+                    text: "Calcular Matriz"
+                    on_press: root.calcular()
+
+                Button:
+                    text: "Limpar Resultado"
+                    on_press: root.limpar()
+
+            Label:
+                id: output_label
+                text: "Resultado"
+                color: 1, 1, 1, 1
+                text_size: self.width, None
+                height: self.texture_size[1]
+                size_hint_y: None
+                halign: 'left'
+                valign: 'top'

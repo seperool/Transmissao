@@ -1,0 +1,39 @@
+---
+title: "Diagramas"
+author: "Sergio Pedro Rodrigues Oliveira"
+date: last-modified
+date-format: DD MMMM YYYY
+format:
+    html:
+        code-fold: true
+        number-sections: true
+    pdf:
+      toc: false
+      lof: false
+      lot: false
+      toc-depth: 5
+      number-sections: true
+      number-depth: 5
+      colorlinks: true
+      cite-method: biblatex
+    docx:
+      toc: true
+      number-sections: true
+      highlight-style: github
+jupyter: python3
+#bibliography: Quarto/pythonbibliografia.bib
+#csl: Quarto/abnt.csl
+---
+
+\newpage
+
+# Diagramas de estudo de Python
+
+```{mermaid}
+%%| fig-cap: "Plano de estudo de Python"
+flowchart LR
+  A[Python básico] --> B(Projeto)
+  B --> C{Estatística}
+  C --> E[Analise de dados]
+  C --> F[Mineração de dados]
+```

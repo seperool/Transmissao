@@ -1,0 +1,95 @@
+<TransmissaoScreen>:
+    orientation: 'vertical'
+    padding: 10
+    spacing: 5
+
+    ScrollView:
+        size_hint_y: None
+        height: self.parent.height * 0.8
+
+        GridLayout:
+            id: grid
+            cols: 2
+            size_hint_y: None
+            height: self.minimum_height
+            row_default_height: 40
+
+            Label:
+                text: "ra (Ohms):"
+            TextInput:
+                id: input_ra
+                text: "0.1"
+
+            Label:
+                text: "rb (Ohms):"
+            TextInput:
+                id: input_rb
+                text: "0.1"
+
+            Label:
+                text: "rc (Ohms):"
+            TextInput:
+                id: input_rc
+                text: "0.1"
+
+            Label:
+                text: "rmga (m):"
+            TextInput:
+                id: input_rmga
+                text: "0.15"
+
+            Label:
+                text: "rmgb (m):"
+            TextInput:
+                id: input_rmgb
+                text: "0.15"
+
+            Label:
+                text: "rmgc (m):"
+            TextInput:
+                id: input_rmgc
+                text: "0.15"
+
+            Label:
+                text: "Frequência (Hz):"
+            TextInput:
+                id: input_f
+                text: "60"
+
+            Label:
+                text: "Altura ha (m):"
+            TextInput:
+                id: input_ha
+                text: "20"
+
+            Label:
+                text: "Altura hb (m):"
+            TextInput:
+                id: input_hb
+                text: "30"
+
+            Label:
+                text: "Altura hc (m):"
+            TextInput:
+                id: input_hc
+                text: "20"
+
+    BoxLayout:
+        size_hint_y: None
+        height: 50
+        spacing: 10
+
+        Button:
+            text: "Calcular Matriz"
+            on_press: root.calcular()
+
+        Button:
+            text: "Limpar Resultado"
+            on_press: root.limpar()
+
+    Label:
+        id: output_label
+        text: "Resultado"
+        text_size: self.width, None
+        height: self.texture_size[1]
+        size_hint_y: None
