@@ -1,0 +1,64 @@
+---
+title: "LinhaMestre"
+subtitle: "Programa de métodos de linha de transmissão"
+author: "Sergio Pedro R Oliveira"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+#lof: true #adiciona lista de figuras
+#lot: true #adiciona lista de tabelas
+#toc-title: SUMÁRIO #nome do sumário
+output:
+  md_document:
+    number_sections: true
+    variant: markdown_github
+---
+
+\thispagestyle{empty}
+
+\newpage
+\pagenumbering{roman}
+
+```{=latex}
+\setcounter{tocdepth}{4}
+\renewcommand{\contentsname}{SUMÁRIO}
+\tableofcontents
+```
+
+\newpage
+
+```{=latex}
+\setcounter{tocdepth}{4}
+\renewcommand{\listfigurename}{LISTA DE FIGURAS}
+\listoffigures
+```
+
+\newpage
+
+```{=latex}
+\setcounter{tocdepth}{4}
+\renewcommand{\listtablename}{LISTA DE TABELAS}
+\listoftables
+```
+
+```{r Pacotes, message=FALSE, warning=FALSE, echo=FALSE}
+library(knitr)
+library(rmarkdown)
+library(readr)
+library(tibble)
+library(magrittr)
+library(dplyr)
+library(tidyr)
+library(data.table)
+library(janitor)
+```
+
+\newpage
+
+# OBJETIVO
+
+Estudo dirigido de Python.\
+
+livro: Curso Intensivo de Python: Uma introdução prática e baseada em projetos à programação.\
+Editora: Novatec\
+
+\pagenumbering{arabic}
+\newpage
