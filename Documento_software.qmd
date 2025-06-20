@@ -1,6 +1,11 @@
 ---
 title: "Documento de Planejamento de Software: LinhaMestre"
-author: "Sergio Pedro Rodrigues Oliveira e Raphael"
+subtitle: "Documento de Planejamento de Software: Software de Métodos de Cálculo de Impedâncias e Capacitâncias de Linha de Transmissão"
+author: 
+    - name: "Sergio Pedro Rodrigues Oliveira" 
+    - name: "Raphael Mello de Oliveira"
+    - name: "Paulo Victor de Souza Borges" 
+      roles: "Professor Orientador"
 date: last-modified
 date-format: DD MMMM YYYY
 format:
@@ -25,9 +30,7 @@ bibliography: Quarto/pythonbibliografia.bib
 csl: Quarto/abnt.csl
 ---
 
-# Documento de Planejamento de Software: Software de Métodos de Cálculo de Impedâncias e Capacitâncias de Linha de Transmissão
-
-## 1. Visão Geral do Projeto
+# Visão Geral do Projeto
 
 * **Nome do Projeto:** Software de Métodos de Cálculo de Impedâncias e Capacitâncias de Linha de Transmissão
 * **Nome do Software:** **LinhaMestre**
@@ -35,9 +38,11 @@ csl: Quarto/abnt.csl
 * **Propósito:** O principal **propósito** deste software é atuar como uma **ferramenta computacional** dedicada ao **cálculo de impedâncias e capacitâncias de linhas de transmissão**. Ele oferece uma abordagem sistemática e precisa para aplicar os **métodos matemáticos e computacionais** necessários para determinar esses parâmetros cruciais em projetos e análises de engenharia elétrica. Ao automatizar esses cálculos complexos, o software visa **simplificar o trabalho de engenheiros e estudantes**, **reduzir a ocorrência de erros manuais** e **acelerar significativamente o processo de análise** de sistemas de transmissão de energia elétrica. Em essência, ele serve como um recurso indispensável para otimizar o design e a avaliação do desempenho de linhas de transmissão.
 * **Público-Alvo:** Engenheiros eletricistas (especialmente de sistemas de potência), técnicos em eletrônica, estudantes de engenharia elétrica e pesquisadores na área de transmissão de energia.
 
+---
+
 \newpage
 
-## 2. Funcionalidades Principais (O que o software fará?)
+# Funcionalidades Principais (O que o software fará?)
 
 * **Entrada de Parâmetros da Linha:** Interface para inserção de dados como frequência, resistividade do condutor, permissividade do dielétrico e dimensões físicas. O software será projetado para lidar com linhas de transmissão com **3 cabos condutores** e, opcionalmente, **1 cabo para-raios**. Isso implica que a interface e os métodos de cálculo devem acomodar essa configuração específica.
 * **Exibição de Resultados:** Apresentar os resultados dos cálculos de forma clara e organizada, incluindo unidades. As matrizes de resultados serão exibidas no formato **3x3 ou 4x4**, dependendo do método de cálculo e da configuração da linha (presença de cabo para-raios, por exemplo).
@@ -56,9 +61,11 @@ csl: Quarto/abnt.csl
         * **Feixe de Condutores:** Determinação da capacitância para configurações de condutores em feixe (para 3 condutores por feixe).
         * **Capacitância de Sequência:** Cálculo das capacitâncias de sequência positiva, negativa e zero.
 
+---
+
 \newpage
 
-## 3. Requisitos Não Funcionais (Como o software se comportará?)
+# Requisitos Não Funcionais (Como o software se comportará?)
 
 * **Precisão:** Os cálculos devem ser altamente precisos, seguindo as fórmulas e métodos padrões da engenharia elétrica, reconhecidos na literatura técnica e normativa. Os resultados numéricos exibidos devem ser apresentados com **duas casas decimais** para clareza e padronização.
 * **Usabilidade:** A interface do usuário deve ser intuitiva e fácil de usar, permitindo que o usuário insira dados e visualize resultados sem dificuldades. A interface deve ser clara ao solicitar os parâmetros dos **3 condutores** e do cabo para-raios (se houver).
@@ -69,18 +76,18 @@ csl: Quarto/abnt.csl
 
 ---
 
-\newpage
-
-## 4. Tecnologias Sugeridas (Como o software será construído?)
+# Tecnologias Sugeridas (Como o software será construído?)
 
 * **Linguagem de Programação:** **Python**
 * **Biblioteca GUI:** **Tkinter** (para construção da interface gráfica).
 * **Bibliotecas de Cálculo Numérico:** **NumPy** e **SciPy** (essenciais para manipulação de matrizes, números complexos e resolução de sistemas lineares complexos envolvidos nos métodos de Carson e de Sequência).
 * **Controle de Versão:** **Git** (ferramenta de controle de versão distribuído) e **GitHub** (plataforma para hospedagem de repositórios e colaboração).
 
+---
+
 \newpage
 
-## 5. Design da Interface do Usuário (UI/UX) e Fluxo de Telas
+# Design da Interface do Usuário (UI/UX) e Fluxo de Telas
 
 O software será estruturado em duas telas principais para proporcionar uma experiência de usuário clara e focada:
 
@@ -108,9 +115,11 @@ O software será estruturado em duas telas principais para proporcionar uma expe
         * **1/3 Inferior (Área de Resultados):**
             * Um espaço dedicado para exibir a **matriz de resultado** dos cálculos. Pode ser um widget de texto (`Text`) ou uma estrutura de tabela (`TreeView`, se mais complexo) que formatará os dados de forma legível. Essas matrizes serão do tipo **3x3 ou 4x4**. Os resultados devem incluir unidades e, se aplicável, as partes real e imaginária de números complexos, **arredondados para duas casas decimais**.
 
+---
+
 \newpage
 
-## 6. Plano de Desenvolvimento Simplificado (Como será feito?)
+# Plano de Desenvolvimento Simplificado (Como será feito?)
 
 * **Prazo Limite para Apresentação:** 10/07/2025
 * **Fase 1: Definição, Modelagem e Prototipagem da UI:**
@@ -140,13 +149,15 @@ O software será estruturado em duas telas principais para proporcionar uma expe
     * Empacotamento do software para distribuição (ex: com PyInstaller para criar um executável compatível com Windows e Linux).
     * Configuração e manutenção do repositório no GitHub para controle de versão e colaboração.
 
+---
+
 \newpage
 
-## 7. Considerações Adicionais (Opcional)
+# Considerações Adicionais (Opcional)
 
 * **Diferencial:** Este software pode se diferenciar por oferecer uma suíte de métodos de cálculo abrangente e integrada, superando calculadoras online que geralmente focam em apenas um tipo de cálculo. A capacidade de considerar detalhes como cabos para-raios e condutores em feixe o tornará uma ferramenta mais completa.
 * **Escalabilidade Futura:** Possibilidade de adicionar:
-    * Cálculo para outros tipos de linhas de transmissão (por exemplo, cabos subterrâneos, linhas de transmissão com múltiplas fases complexas).
+    * Variação flexível do número de cabos de transmissão e de cabos para-raios, oferecendo maior adaptabilidade e precisão para diferentes configurações de linhas.
     * Geração de relatórios ou gráficos de desempenho.
     * Capacidade de salvar e carregar projetos de linhas de transmissão.
 * **Requisitos de Conhecimento:** O desenvolvimento exigirá um forte domínio dos princípios de linhas de transmissão, grandezas complexas, álgebra linear e métodos numéricos em engenharia elétrica, além de programação em Python e uso de Tkinter.
