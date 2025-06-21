@@ -163,7 +163,7 @@ O software será estruturado em duas telas principais para proporcionar uma expe
 # Considerações Adicionais (Opcional)
 
 * **Diferencial:** Este software pode se diferenciar por oferecer uma suíte de métodos de cálculo abrangente e integrada, superando calculadoras online que geralmente focam em apenas um tipo de cálculo. A capacidade de considerar detalhes como cabos para-raios e condutores em feixe o tornará uma ferramenta mais completa.
-* **Escalabilidade Futura:** Possibilidade de adicionar:
+* **Escalabilidade Futura** (Possibilidade de adicionar)**:**
     * Variação flexível do número de cabos de transmissão e de cabos para-raios, oferecendo maior adaptabilidade e precisão para diferentes configurações de linhas.
     * Geração de relatórios ou gráficos de desempenho.
     * Capacidade de salvar e carregar projetos de linhas de transmissão.
