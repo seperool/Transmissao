@@ -1,0 +1,22 @@
+ESCRITO EM 21/06/25
+---
+PARA 22/06/25
+---
+Subir github:
+
+Estudar:
+
+Afazeres:
+	- Traduzir para o Python os métodos em Octave
+	- Transformar os métodos em funções no Python
+	- Janela principal
+		- Lista de métodos
+		- Seleção do método
+		- Botão "ok" enviar usuário para janela do método
+	- Janela do método
+		- Substituir a janela principal
+		- Botão "voltar" enviar usuário para a janela principal
+		- Botão "calcular" pegar os inputs do usuário, calcular o metodo, devolver a tabela com os resultados.
+			- Pegar input do usuário
+			- Chamar o mátodo (calcular o método)
+			- Devolver tabela com resultados na área de resultados
