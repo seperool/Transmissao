@@ -28,6 +28,7 @@ class aplicativo(funcs):                                                        
         self.frames_da_tela()                                                       # Cria e posiciona os frames da interface
         self.widgets_frame_info()                                                   # Cria e posiciona os widgets no frame de informações
         self.lista_frame_result()                                                   # Cria e posiciona a Treeview no frame de resultados
+        self.inserir_dados_tabela()
         root.mainloop()                                                             # Inicia o loop principal de eventos do Tkinter
 
     def tela_metodo_X(self):                                                        # Configurações da janela principal
@@ -37,14 +38,14 @@ class aplicativo(funcs):                                                        
         self.root.maxsize(width=900, height=700)                                    # Define as dimensões máximas permitidas para a janela
         self.root.minsize(width=400, height=300)                                    # Define as dimensões mínimas permitidas para a janela
 
-    def frames_da_tela(self):                                                       # Cria e organiza os frames na tela
+    def frames_da_tela(self):                                                         # Cria e organiza os frames na tela
         self.frame_info = Frame(self.root, bd=4, bg='#BEBEBE',                      # Cria um frame para informações
                                  highlightbackground= 'black', highlightthickness=3 ) # Define borda com realce
         self.frame_info.place(relx= 0.02 , rely=0.02, relwidth= 0.96,relheight= 0.45) # Posiciona o frame na parte superior
 
-        self.frame_result = Frame(self.root, bd=4, bg='#BEBEBE',                    # Cria um frame para resultados
-                                 highlightbackground='black', highlightthickness=3)  # Define borda com realce
-        self.frame_result.place(relx=0.02, rely=0.5, relwidth=0.96, relheight=0.45)  # Posiciona o frame na parte inferior
+        self.frame_result = Frame(self.root, bd=4, bg='#BEBEBE',                  # Cria um frame para resultados
+                                 highlightbackground='black', highlightthickness=3) # Define borda com realce
+        self.frame_result.place(relx=0.02, rely=0.5, relwidth=0.96, relheight=0.45) # Posiciona o frame na parte inferior
 
     def widgets_frame_info(self):                                                   # Cria e posiciona os widgets no frame de informações
         # --- Botões ---
@@ -61,17 +62,17 @@ class aplicativo(funcs):                                                        
         self.botao_calc.place(relx=.8,rely=.85,relwidth=0.15,relheight=0.1)         # Posiciona o botão
 
         # --- Labels e Entradas ---
-        self.lb_variaveis = Label(self.frame_info, text='Variáveis')               # Cria a label "Variáveis"
+        self.lb_variaveis = Label(self.frame_info, text='Variáveis')                # Cria a label "Variáveis"
         self.lb_variaveis.place(relx=.3,rely=.1)                                    # Posiciona a label
         
         # Variável Raio do condutor
-        self.lb_r = Label(self.frame_info, text='Raio do condutor')                # Cria a label "Raio do condutor"
+        self.lb_r = Label(self.frame_info, text='Raio do condutor')                 # Cria a label "Raio do condutor"
         self.lb_r.place(relx=.2,rely=.23)                                           # Posiciona a label
         self.r_entry = Entry(self.frame_info)                                       # Cria a entrada para o raio do condutor
         self.r_entry.place(relx=.5,rely=.23,relwidth=0.08)                          # Posiciona a entrada
 
         # Variável Altura
-        self.lb_h = Label(self.frame_info, text='Altura do condutor ao solo')      # Cria a label "Altura do condutor ao solo"
+        self.lb_h = Label(self.frame_info, text='Altura do condutor ao solo')       # Cria a label "Altura do condutor ao solo"
         self.lb_h.place(relx=.2,rely=.36)                                           # Posiciona a label
         self.h_entry = Entry(self.frame_info)                                       # Cria a entrada para a altura do condutor
         self.h_entry.place(relx=.5,rely=.36,relwidth=0.08)                          # Posiciona a entrada
@@ -117,5 +118,18 @@ class aplicativo(funcs):                                                        
         self.lista_CAP.configure(yscroll=self.scrollLista.set)                      # Associa a barra de rolagem à Treeview
         self.scrollLista.place(relx=0.96, rely=0.1, relwidth=0.02, relheight=0.85)  # Posiciona a barra de rolagem
 
+    def inserir_dados_tabela(self):                                                 # Método para inserir dados na tabela Treeview
+        # Limpa qualquer dado existente na Treeview (útil para atualizações)
+        for i in self.lista_CAP.get_children():                                     # Itera sobre todos os itens
+            self.lista_CAP.delete(i)                                                # Deleta cada item
+
+        # Inserindo os dados conforme solicitado
+        # A primeira coluna "" é para o identificador interno do Treeview.
+        # Os valores da primeira coluna visível ('A') vão para o 'text' do item.
+        # Os valores das colunas seguintes ('B', 'C') vão para o 'values'.
+        self.lista_CAP.insert("", END, text="A", values=("", "", ""))                # Insere linha para 'A'
+        self.lista_CAP.insert("", END, text="B", values=("", "", ""))                # Insere linha para 'B'
+        self.lista_CAP.insert("", END, text="C", values=("", "", ""))                # Insere linha para 'C'
+
 # --- Inicialização ---
-aplicativo()                                                                        # Inicia o aplicativo, criando uma instância da classe
+aplicativo()                                                                         # Inicia o aplicativo, criando uma instância da classe
