@@ -97,6 +97,11 @@ O software será estruturado em duas telas principais para proporcionar uma expe
     * O usuário **selecionará o método desejado** (clicando em um item da lista ou em um botão).
     * Haverá um **botão "OK"** (ou "Prosseguir", "Selecionar") que, ao ser clicado, validará a seleção e abrirá a próxima janela.
     * A janela anterior (inicial) será **ocultada ou destruída** para dar lugar à janela do método específico.
+    
+    ![Prototipo da janela principal.](Imagens/Imagens/Prototipo-Janela_Principal.png){width=400}
+
+\newpage
+
 2.  **Janela do Método Específico (Cálculo):**
     * Esta janela **substituirá a janela inicial**.
     * **Layout:** Será dividida visualmente em duas seções:
@@ -114,6 +119,8 @@ O software será estruturado em duas telas principais para proporcionar uma expe
                 * Exibirá essa matriz na área de resultados.
         * **1/3 Inferior (Área de Resultados):**
             * Um espaço dedicado para exibir a **matriz de resultado** dos cálculos. Pode ser um widget de texto (`Text`) ou uma estrutura de tabela (`TreeView`, se mais complexo) que formatará os dados de forma legível. Essas matrizes serão do tipo **3x3 ou 4x4**. Os resultados devem incluir unidades e, se aplicável, as partes real e imaginária de números complexos, **arredondados para duas casas decimais**.
+    
+    ![Prototipo da janela dos métodos específicos.](Imagens/Imagens/Prototipo-Janela_dos_metodos.png){width=400}
 
 ---
 
