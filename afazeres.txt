@@ -10,7 +10,6 @@ Afazeres:
 	- Traduzir para o Python os métodos em Octave
 	- Transformar os métodos em funções no Python
 	- Janela principal
-		- Lista de métodos
 		- Seleção do método
 		- Botão "ok" enviar usuário para janela do método
 	- Janela do método
