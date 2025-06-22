@@ -13,13 +13,14 @@ class aplicativo():                                                             
 
     def tela_root(self):                                                                # Configurações da janela principal
         self.root.title("LinhaMestre")                                                  # Define o título da janela
+        self.root.configure(background='#2F4F4F')
         self.root.geometry("700x500")                                                   # Define as dimensões iniciais da janela (largura x altura)
         self.root.resizable(False,False)                                                # Impede o redimensionamento da janela (largura, altura)
         self.root.maxsize(width=900, height=700)                                        # Define as dimensões máximas permitidas para a janela
         self.root.minsize(width=400, height=300)                                        # Define as dimensões mínimas permitidas para a janela
 
     def frames_da_tela(self):                                                           # Cria e organiza os frames na tela
-        self.frame_principal = Frame(self.root, bd=4, bg='#BEBEBE',                    # Cria um frame principal para o conteúdo
+        self.frame_principal = Frame(self.root, bd=4, bg="gray",                    # Cria um frame principal para o conteúdo
                                      highlightbackground= 'black', highlightthickness=3 ) # Define borda e realce do frame
         self.frame_principal.place(relx= 0.02 , rely=0.02, relwidth= 0.96,relheight= 0.96) # Posiciona o frame principal na janela
     

@@ -34,6 +34,7 @@ class aplicativo(funcs):                                                        
     def tela_metodo_X(self):                                                        # Configurações da janela principal
         self.root.title("Método x de LinhaMestre")                                  # Define o título da janela
         self.root.geometry("700x500")                                               # Define as dimensões iniciais da janela (largura x altura)
+        self.root.configure(background='#2F4F4F')
         self.root.resizable(False,False)                                            # Impede o redimensionamento da janela (largura, altura)
         self.root.maxsize(width=900, height=700)                                    # Define as dimensões máximas permitidas para a janela
         self.root.minsize(width=400, height=300)                                    # Define as dimensões mínimas permitidas para a janela
@@ -58,7 +59,7 @@ class aplicativo(funcs):                                                        
         self.botao_limpar.place(relx=.80,rely=.01,relwidth=0.15,relheight=0.1)      # Posiciona o botão
 
         self.botao_calc = Button(self.frame_info, text='Calcular',bd=4,             # Cria o botão "Calcular"
-                                     font=('Arial',10))                             # Define a fonte do botão
+                                    font=('Arial',10))                             # Define a fonte do botão
         self.botao_calc.place(relx=.8,rely=.85,relwidth=0.15,relheight=0.1)         # Posiciona o botão
 
         # --- Labels e Entradas ---
