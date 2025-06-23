@@ -69,7 +69,7 @@ csl: Quarto/abnt.csl
 
 * **Precisão:** Os cálculos devem ser altamente precisos, seguindo as fórmulas e métodos padrões da engenharia elétrica, reconhecidos na literatura técnica e normativa. Os resultados numéricos exibidos devem ser apresentados com **duas casas decimais** para clareza e padronização.
 * **Usabilidade:** A interface do usuário deve ser intuitiva e fácil de usar, permitindo que o usuário insira dados e visualize resultados sem dificuldades. A interface deve ser clara ao solicitar os parâmetros dos **3 condutores** e do cabo para-raios (se houver).
-* **Desempenho:** Os cálculos devem ser executados rapidamente, mesmo para entradas complexas e com múltiplos condutores, e a aplicação deve ser responsiva.
+* **Desempenho:** Os cálculos devem ser executados rapidamente, mesmo para os métodos mais complexos. Durante o tempo de processamento, a interface do usuário deve congelar, impedindo a interação até que o cálculo seja concluído. Para um cenário padrão com 3 condutores (e cabo para-raios, se aplicável), se o cálculo exceder 10 segundos, o programa deverá exibir uma mensagem de erro clara, indicando que a operação demorou demais e não pôde ser finalizada.
 * **Confiabilidade:** O software deve ser robusto, apresentar poucos erros ou falhas e fornecer resultados consistentes para as mesmas entradas.
 * **Manutenibilidade:** O código deve ser bem estruturado, modular e documentado para facilitar futuras atualizações, a adição de novos métodos de cálculo ou tipos de linha, e correções de bugs.
 * **Portabilidade:** O software será compatível e deve funcionar corretamente em sistemas operacionais **Windows** e **Linux**, aproveitando a natureza multiplataforma da biblioteca Tkinter.
@@ -93,16 +93,16 @@ O software será estruturado em duas telas principais para proporcionar uma expe
 
 1.  **Janela Inicial (Seleção de Métodos):**
     * Esta será a **tela de entrada** do software.
-    * Exibirá uma **lista clara e organizada** de todos os métodos de cálculo disponíveis (tanto longitudinais quanto transversais). Pode ser uma lista de opções (`ListBox`, `OptionMenu`) ou uma série de botões para cada método.
+    * Exibirá uma **lista clara e organizada** de todos os métodos de cálculo disponíveis (tanto longitudinais quanto transversais). Pode ser uma lista de opções (`OptionMenu`).
     * O usuário **selecionará o método desejado** (clicando em um item da lista ou em um botão).
     * Haverá um **botão "OK"** (ou "Prosseguir", "Selecionar") que, ao ser clicado, validará a seleção e abrirá a próxima janela.
-    * A janela anterior (inicial) será **ocultada ou destruída** para dar lugar à janela do método específico.
+    * A janela anterior (inicial) será **destruída** para dar lugar à janela do método específico.
     
     ![Prototipo da janela principal.](Imagens/Imagens/Prototipo-Janela_Principal.png){width=400}
 
 \newpage
 
-2.  **Janela do Método Específico (Cálculo):**
+1.  **Janela do Método Específico (Cálculo):**
     * Esta janela **substituirá a janela inicial**.
     * **Layout:** Será dividida visualmente em duas seções:
         * **2/3 Superiores (Área de Inputs e Controles):**
