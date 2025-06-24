@@ -2,6 +2,9 @@ from tkinter import * # Importa todas as classes e funções do módulo Tkinter 
 from tkinter import ttk # Importa o módulo ttk do Tkinter, que oferece widgets mais modernos e estilizados (ex: ttk.Treeview)
 from tkinter import messagebox # Importa o módulo messagebox para exibir caixas de diálogo e alertas ao usuário
 
+import numpy as np
+import math
+
 root = Tk()                                                                             # Cria a janela principal da aplicação Tkinter; esta será a janela inicial visível
 
 class funcs():                                                                          # Define uma classe para agrupar funções de lógica e comportamento (back-end do aplicativo)
