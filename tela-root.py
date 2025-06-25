@@ -15,7 +15,7 @@ class funcs():                                                                  
             messagebox.showinfo("Erro de seleção de método!!!", msg)                    # Exibe uma caixa de diálogo com o título e a mensagem de erro
         elif self.metodo_select == "Longitudinal Imagem":                               # Se um método foi selecionado, verifica se é "Longitudinal Imagem"
             self.root.destroy()                                                         # Fecha/destrói a janela principal atual (a primeira tela)
-            self.janela_metodo_x()                                                      # Chama o método para abrir a nova janela, específica para o "Método Longitudinal Imagem"
+            self.janela_metodo_imagem()                                                 # Chama o método para abrir a nova janela, específica para o "Método Longitudinal Imagem"
         else:                                                                           # Se o método selecionado não for vazio e nem "Longitudinal Imagem"
             pass                                                                        # Não faz nada por enquanto (aqui poderia haver lógica para outros métodos)
 
@@ -72,7 +72,7 @@ class aplicativo(funcs):                                                        
         self.metodo_select = self.Tipvar.get()                                          # Atualiza a variável de instância 'metodo_select' com o valor mais recente do menu dropdown
         print(f"Método selecionado: {self.metodo_select}")                              # Imprime no console qual método foi selecionado (útil para depuração)
 
-    def janela_metodo_x(self):                                                          # Método para criar e configurar uma nova janela específica para o "Método Longitudinal Imagem"
+    def janela_metodo_imagem(self):                                                          # Método para criar e configurar uma nova janela específica para o "Método Longitudinal Imagem"
         self.root2 = Tk()                                                               # Cria uma NOVA janela principal do Tkinter para substituir a anterior
         self.root2.title("Método x de LinhaMestre")                                     # Define o título desta nova janela
         self.root2.geometry("700x500")                                                  # Define o tamanho inicial da nova janela
@@ -80,6 +80,5 @@ class aplicativo(funcs):                                                        
         self.root2.resizable(False,False)                                               # Impede que a nova janela seja redimensionada pelo usuário
         self.root2.maxsize(width=900, height=700)                                       # Define o tamanho máximo da nova janela
         self.root2.minsize(width=400, height=300)                                       # Define o tamanho mínimo da nova janela
-        # Nota: 'transient', 'focus_force' e 'grab_set' foram removidos pois 'root2' é agora a nova janela principal
 
 aplicativo()                                                                            # Cria uma instância da classe 'aplicativo', o que dá início à execução do programa da interface gráfica
