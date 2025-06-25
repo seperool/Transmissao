@@ -1,136 +1,281 @@
 from tkinter import * # Importa classes e funções do Tkinter
 from tkinter import ttk                                                             # Importa o módulo ttk (widgets estilizados)
+from tkinter import messagebox                                                      # Importa messagebox para exibir mensagens de erro/informação
 
-root = Tk()                                                                         # Cria a janela principal da aplicação
+import numpy as np                                                                  # Importa NumPy para operações matriciais
+import math                                                                         # Importa math para funções matemáticas
 
-# --- Backend: Lógica de Negócio ---
-class funcs():                                                                      # Define a classe para funções de backend
-    def limpa_tela(self):                                                           # Método para limpar campos de entrada
-        self.r_entry.delete(0,END)                                                  # Limpa o campo do raio do condutor
-        self.h_entry.delete(0,END)                                                  # Limpa o campo da altura do condutor
-        self.dab_entry.delete(0,END)                                                # Limpa o campo da distância entre A e B
-        self.dac_entry.delete(0,END)                                                # Limpa o campo da distância entre A e C
-        self.dbc_entry.delete(0,END)                                                # Limpa o campo da distância entre B e C
+root = Tk()                                                                         # Cria a janela principal do Tkinter
 
-    def get_variaveis(self):                                                        # Método para obter valores das variáveis
-        self.r = self.r_entry.get()                                                 # Obtém o valor do raio do condutor
-        self.h = self.h_entry.get()                                                 # Obtém o valor da altura do condutor
-        self.dab = self.dab_entry.get()                                             # Obtém o valor da distância entre A e B
-        self.dac = self.dac_entry.get()                                             # Obtém o valor da distância entre A e C
-        self.dbc = self.dbc_entry.get()                                             # Obtém o valor da distância entre B e C
-    #def met_capacitancia_imagem():                                                 # (Comentado) Placeholder para método futuro
+# --- Backend: Lógica de Negócio do Cálculo (Função Separada) ---
+def metodo_imagem_long(ra, rb, rc, xa, ha, xb, hb, xc, hc, R=None, Rmg_val=None):
+    """
+    Calcula a matriz de impedância série por unidade de comprimento de uma linha de transmissão trifásica,
+    utilizando o Método das Imagens para considerar o efeito do solo.
+    """
+
+    mi_0 = 4 * math.pi * (10**(-7))                                     # Permeabilidade magnética do vácuo
+    f = 60                                                              # Frequência do sistema (Hertz)
+    w = 2 * math.pi * f                                                 # Frequência angular
+
+    Rmg = None                                                          # Inicializa o Raio Médio Geométrico (RMG)
+
+    if Rmg_val is not None:                                             # Prioriza RMG_val se fornecido
+        Rmg = Rmg_val
+    elif R is not None:                                                 # Calcula RMG a partir de R se Rmg_val não estiver presente
+        Rmg = R * math.exp(-1/4)
+    
+    if Rmg is None:                                                     # Erro se nenhum raio válido for dado
+        raise ValueError("ERRO! É necessário fornecer o valor do raio do condutor (R) OU o Raio Médio Geométrico (Rmg_val).")
+    if Rmg <= 0:                                                        # Erro se RMG for não positivo
+        raise ValueError("ERRO! O Raio Médio Geométrico (RMG) deve ser um valor positivo.")
+    
+    # --- Cálculo das Distâncias Geométricas ---
+    dab = np.sqrt(((xa - xb)**2) + ((ha - hb)**2))                      # Distância entre condutores 'a' e 'b'
+    dac = np.sqrt(((xa - xc)**2) + ((ha - hc)**2))                      # Distância entre condutores 'a' e 'c'
+    dbc = np.sqrt(((xb - xc)**2) + ((hb - hc)**2))                      # Distância entre condutores 'b' e 'c'
+    
+    dab_l = np.sqrt(((xa - xb)**2) + ((ha + hb)**2))                    # Distância entre 'a' e imagem de 'b'
+    dac_l = np.sqrt(((xa - xc)**2) + ((ha + hc)**2))                    # Distância entre 'a' e imagem de 'c'
+    dbc_l = np.sqrt(((xb - xc)**2) + ((hb + hc)**2))                    # Distância entre 'b' e imagem de 'c'
+    
+    # --- Cálculo das Impedâncias Série (por unidade de comprimento) ---
+    Zaa = ra + (((1j * mi_0 * w) / (2 * math.pi)) * math.log((2 * ha) / Rmg)) # Impedância própria de 'a'
+    Zbb = rb + (((1j * mi_0 * w) / (2 * math.pi)) * math.log((2 * hb) / Rmg)) # Impedância própria de 'b'
+    Zcc = rc + (((1j * mi_0 * w) / (2 * math.pi)) * math.log((2 * hc) / Rmg)) # Impedância própria de 'c'
+    
+    Zab = ((1j * w * mi_0) / (2 * math.pi)) * (math.log(dab_l / dab))   # Impedância mútua 'ab'
+    Zac = ((1j * w * mi_0) / (2 * math.pi)) * (math.log(dac_l / dac))   # Impedância mútua 'ac'
+    Zbc = ((1j * w * mi_0) / (2 * math.pi)) * (math.log(dbc_l / dbc))   # Impedância mútua 'bc'
+    
+    Zba = Zab                                                           # Simetria: Zba = Zab
+    Zca = Zac                                                           # Simetria: Zca = Zac
+    Zcb = Zbc                                                           # Simetria: Zcb = Zbc
+    
+    # --- Montagem da Matriz de Impedância da Linha ---
+    Z = np.array([                                                      # Cria a matriz de impedância (NumPy array)
+        [Zaa, Zab, Zac],
+        [Zba, Zbb, Zbc],
+        [Zca, Zcb, Zcc]
+    ])
+
+    return Z                                                            # Retorna a matriz de impedância
+
+# --- Backend: Lógica de Interação da UI ---
+class funcs():                                                          # Define a classe para funções de backend
+    def limpa_tela(self):                                               # Método para limpar campos de entrada e Treeview
+        self.ra_entry.delete(0,END)                                     # Limpa resistência A
+        self.rb_entry.delete(0,END)                                     # Limpa resistência B
+        self.rc_entry.delete(0,END)                                     # Limpa resistência C
+        self.r_entry.delete(0,END)                                      # Limpa raio do condutor
+        self.rmg_entry.delete(0,END)                                    # Limpa RMG
+        self.xa_entry.delete(0,END)                                     # Limpa coordenada X de A
+        self.xb_entry.delete(0,END)                                     # Limpa coordenada X de B
+        self.xc_entry.delete(0,END)                                     # Limpa coordenada X de C
+        self.ha_entry.delete(0,END)                                     # Limpa altura H de A
+        self.hb_entry.delete(0,END)                                     # Limpa altura H de B
+        self.hc_entry.delete(0,END)                                     # Limpa altura H de C
+        
+        for i in self.lista_CAP.get_children():                         # Itera e deleta itens na Treeview
+            self.lista_CAP.delete(i)
+        
+        self.inserir_dados_tabela(np.full((3, 3), np.nan, dtype=complex)) # Preenche Treeview com campos vazios
+
+    def get_variaveis(self):                                            # Obtém e converte valores dos campos
+        try:
+            ra = float(self.ra_entry.get()) if self.ra_entry.get() else 0.0 # Converte Ra ou 0.0
+            rb = float(self.rb_entry.get()) if self.rb_entry.get() else 0.0 # Converte Rb ou 0.0
+            rc = float(self.rc_entry.get()) if self.rc_entry.get() else 0.0 # Converte Rc ou 0.0
+
+            R_val = float(self.r_entry.get()) if self.r_entry.get() else None # Converte R ou None
+            Rmg_val = float(self.rmg_entry.get()) if self.rmg_entry.get() else None # Converte RMG ou None
+            
+            xa = float(self.xa_entry.get()) if self.xa_entry.get() else 0.0 # Converte Xa ou 0.0
+            xb = float(self.xb_entry.get()) if self.xb_entry.get() else 0.0 # Converte Xb ou 0.0
+            xc = float(self.xc_entry.get()) if self.xc_entry.get() else 0.0 # Converte Xc ou 0.0
+
+            ha = float(self.ha_entry.get()) if self.ha_entry.get() else 0.0 # Converte Ha ou 0.0
+            hb = float(self.hb_entry.get()) if self.hb_entry.get() else 0.0 # Converte Hb ou 0.0
+            hc = float(self.hc_entry.get()) if self.hc_entry.get() else 0.0 # Converte Hc ou 0.0
+
+            if ha <= 0 or hb <= 0 or hc <= 0:                           # Valida alturas positivas
+                raise ValueError("As alturas dos condutores (Ha, Hb, Hc) devem ser maiores que zero.")
+
+            return {                                                    # Retorna dicionário de parâmetros
+                'ra': ra, 'rb': rb, 'rc': rc,
+                'xa': xa, 'ha': ha,
+                'xb': xb, 'hb': hb,
+                'xc': xc, 'hc': hc,
+                'R': R_val, 'Rmg_val': Rmg_val
+            }
+        except ValueError as e:                                         # Captura erros de conversão
+            messagebox.showerror("Erro de Entrada", f"Por favor, insira valores numéricos válidos. Detalhes: {e}")
+            return None                                                 # Retorna None em caso de erro
+
+    def calcular(self):                                                 # Orquestra o cálculo e exibição
+        params = self.get_variaveis()                                   # Obtém os parâmetros de entrada
+        if params is None:                                              # Sai se houver erro nos parâmetros
+            return
+
+        try:
+            Z_matrix = metodo_imagem_long(                              # Chama a função de cálculo
+                ra=params['ra'], rb=params['rb'], rc=params['rc'],
+                xa=params['xa'], ha=params['ha'],
+                xb=params['xb'], hb=params['hb'],
+                xc=params['xc'], hc=params['hc'],
+                R=params['R'], Rmg_val=params['Rmg_val']
+            )
+            self.inserir_dados_tabela(Z_matrix)                         # Atualiza a tabela com o resultado
+            messagebox.showinfo("Cálculo Concluído", "A matriz de impedância foi calculada e exibida na tabela.") # Mensagem de sucesso
+        except ValueError as e:                                         # Captura erros específicos de cálculo
+            messagebox.showerror("Erro de Cálculo", f"Ocorreu um erro durante o cálculo: {e}")
+        except Exception as e:                                          # Captura erros inesperados
+            messagebox.showerror("Erro Inesperado", f"Ocorreu um erro inesperado: {e}")
+
+    def inserir_dados_tabela(self, Z_matrix):                           # Insere dados na Treeview
+        for i in self.lista_CAP.get_children():                         # Limpa dados existentes
+            self.lista_CAP.delete(i)
+        
+        # --- MODIFICAÇÃO AQUI: Altera de {:.3f} para {:.6f} ---
+        complex_format = "({:.6f} + j{:.6f})"                           # Formato de exibição para números complexos (6 casas decimais)
+
+        row_labels = ["A", "B", "C"]                                    # Rótulos das linhas (Fases)
+
+        for i, row_label in enumerate(row_labels):                      # Itera pelas linhas da matriz
+            row_values = []
+            for j in range(Z_matrix.shape[1]):                          # Itera pelas colunas
+                complex_num = Z_matrix[i, j]
+                if np.isnan(complex_num.real) and np.isnan(complex_num.imag): # Se for NaN, exibe vazio
+                    formatted_value = ""
+                else:                                                   # Caso contrário, formata o número
+                    formatted_value = complex_format.format(complex_num.real, complex_num.imag)
+                row_values.append(formatted_value)
+            
+            self.lista_CAP.insert("", END, text=row_label, values=tuple(row_values)) # Insere a linha na Treeview
 
 # --- Frontend: Interface Gráfica ---
-class aplicativo(funcs):                                                            # Define a classe do aplicativo, herdando funções
-    def __init__(self):                                                             # Construtor da classe
-        self.root = root                                                            # Atribui a janela principal à instância da classe
-        self.tela_metodo_X()                                                        # Configura a interface inicial da janela
-        self.frames_da_tela()                                                       # Cria e posiciona os frames da interface
-        self.widgets_frame_info()                                                   # Cria e posiciona os widgets no frame de informações
-        self.lista_frame_result()                                                   # Cria e posiciona a Treeview no frame de resultados
-        self.inserir_dados_tabela()
-        root.mainloop()                                                             # Inicia o loop principal de eventos do Tkinter
-
-    def tela_metodo_X(self):                                                        # Configurações da janela principal
-        self.root.title("Método x de LinhaMestre")                                  # Define o título da janela
-        self.root.geometry("700x500")                                               # Define as dimensões iniciais da janela (largura x altura)
-        self.root.configure(background='#2F4F4F')
-        self.root.resizable(False,False)                                            # Impede o redimensionamento da janela (largura, altura)
-        self.root.maxsize(width=900, height=700)                                    # Define as dimensões máximas permitidas para a janela
-        self.root.minsize(width=400, height=300)                                    # Define as dimensões mínimas permitidas para a janela
-
-    def frames_da_tela(self):                                                         # Cria e organiza os frames na tela
-        self.frame_info = Frame(self.root, bd=4, bg='#BEBEBE',                      # Cria um frame para informações
-                                 highlightbackground= 'black', highlightthickness=3 ) # Define borda com realce
-        self.frame_info.place(relx= 0.02 , rely=0.02, relwidth= 0.96,relheight= 0.45) # Posiciona o frame na parte superior
-
-        self.frame_result = Frame(self.root, bd=4, bg='#BEBEBE',                  # Cria um frame para resultados
-                                 highlightbackground='black', highlightthickness=3) # Define borda com realce
-        self.frame_result.place(relx=0.02, rely=0.5, relwidth=0.96, relheight=0.45) # Posiciona o frame na parte inferior
-
-    def widgets_frame_info(self):                                                   # Cria e posiciona os widgets no frame de informações
-        # --- Botões ---
-        self.botao_return = Button(self.frame_info, text='Retornar',bd=4,           # Cria o botão "Retornar"
-                                     font=('Arial',10))                             # Define a fonte do botão
-        self.botao_return.place(relx=.01,rely=.01,relwidth=0.15,relheight=0.1)      # Posiciona o botão
-
-        self.botao_limpar = Button(self.frame_info, text='Limpar',bd=4,             # Cria o botão "Limpar"
-                                     font=('Arial',10), command=self.limpa_tela)    # Define fonte e ação de limpeza
-        self.botao_limpar.place(relx=.80,rely=.01,relwidth=0.15,relheight=0.1)      # Posiciona o botão
-
-        self.botao_calc = Button(self.frame_info, text='Calcular',bd=4,             # Cria o botão "Calcular"
-                                    font=('Arial',10))                             # Define a fonte do botão
-        self.botao_calc.place(relx=.8,rely=.85,relwidth=0.15,relheight=0.1)         # Posiciona o botão
-
-        # --- Labels e Entradas ---
-        self.lb_variaveis = Label(self.frame_info, text='Variáveis')                # Cria a label "Variáveis"
-        self.lb_variaveis.place(relx=.3,rely=.1)                                    # Posiciona a label
+class aplicativo(funcs):                                                # Define a classe do aplicativo, herda de funcs
+    def __init__(self):                                                 # Construtor da classe
+        self.root = root                                                # Atribui a janela principal
+        self.tela_metodo_X()                                            # Configura a janela
+        self.frames_da_tela()                                           # Cria e posiciona frames
+        self.widgets_frame_info()                                       # Cria widgets no frame de informações
+        self.lista_frame_result()                                       # Cria Treeview no frame de resultados
         
-        # Variável Raio do condutor
-        self.lb_r = Label(self.frame_info, text='Raio do condutor')                 # Cria a label "Raio do condutor"
-        self.lb_r.place(relx=.2,rely=.23)                                           # Posiciona a label
-        self.r_entry = Entry(self.frame_info)                                       # Cria a entrada para o raio do condutor
-        self.r_entry.place(relx=.5,rely=.23,relwidth=0.08)                          # Posiciona a entrada
+        # Esta linha é crucial: ela preenche o Treeview com NaNs que são exibidos como vazios.
+        self.inserir_dados_tabela(np.full((3, 3), np.nan, dtype=complex)) # Inicia o Treeview vazio
 
-        # Variável Altura
-        self.lb_h = Label(self.frame_info, text='Altura do condutor ao solo')       # Cria a label "Altura do condutor ao solo"
-        self.lb_h.place(relx=.2,rely=.36)                                           # Posiciona a label
-        self.h_entry = Entry(self.frame_info)                                       # Cria a entrada para a altura do condutor
-        self.h_entry.place(relx=.5,rely=.36,relwidth=0.08)                          # Posiciona a entrada
+        root.mainloop()                                                 # Inicia o loop principal do Tkinter
 
-        # Criação da label Variáveis distâncias
-        self.lb_distancias = Label(self.frame_info, text='Distâncias')             # Cria a label "Distâncias"
-        self.lb_distancias.place(relx=.3,rely=.49)                                  # Posiciona a label
+    def tela_metodo_X(self):                                            # Configurações da janela
+        self.root.title("Cálculo de Impedância - Método das Imagens")   # Título da janela
+        self.root.geometry("700x500")                                   # Dimensões da janela
+        self.root.configure(background='#2F4F4F')                       # Cor de fundo da janela
+        self.root.resizable(False,False)                                # Impede redimensionamento
+        self.root.maxsize(width=900, height=700)                        # Tamanho máximo
+        self.root.minsize(width=400, height=300)                        # Tamanho mínimo
 
-        # Variável distancia entre A e B
-        self.lb_dab = Label(self.frame_info, text='Distância entre os condutores A e B') # Cria a label "Distância entre A e B"
-        self.lb_dab.place(relx=.2,rely=.62)                                         # Posiciona a label
-        self.dab_entry = Entry(self.frame_info)                                     # Cria a entrada para a distância entre A e B
-        self.dab_entry.place(relx=.5,rely=.62,relwidth=0.08)                        # Posiciona a entrada
+    def frames_da_tela(self):                                           # Cria e organiza os frames
+        self.frame_info = Frame(self.root, bd=4, bg='#BEBEBE', highlightthickness=3) # Frame superior para entradas
+        self.frame_info.place(relx= 0.02 , rely=0.02, relwidth= 0.96,relheight= 0.45) # Posiciona frame superior
 
-        # Variável distancia entre A e C
-        self.lb_dac = Label(self.frame_info, text='Distância entre os condutores A e C') # Cria a label "Distância entre A e C"
-        self.lb_dac.place(relx=.2,rely=.75)                                         # Posiciona a label
-        self.dac_entry = Entry(self.frame_info)                                     # Cria a entrada para a distância entre A e C
-        self.dac_entry.place(relx=.5,rely=.75,relwidth=0.08)                        # Posiciona a entrada
+        self.frame_result = Frame(self.root, bd=4, bg='#BEBEBE', highlightthickness=3) # Frame inferior para resultados
+        self.frame_result.place(relx=0.02, rely=0.5, relwidth=0.96, relheight=0.45)  # Posiciona frame inferior
 
-        # Variável distancia entre B e C
-        self.lb_dbc = Label(self.frame_info, text='Distância entre os condutores B e C') # Cria a label "Distância entre B e C"
-        self.lb_dbc.place(relx=.2,rely=.88)                                         # Posiciona a label
-        self.dbc_entry = Entry(self.frame_info)                                     # Cria a entrada para a distância entre B e C
-        self.dbc_entry.place(relx=.5,rely=.88,relwidth=0.08)                        # Posiciona a entrada
+    def widgets_frame_info(self):                                       # Cria widgets no frame de informações
+        # --- Botões ---
+        self.botao_return = Button(self.frame_info, text='Retornar',bd=4,          # Botão "Retornar"
+                                        font=('Arial',10))                          # Fonte do botão
+        self.botao_return.place(relx=.01,rely=.01,relwidth=0.15,relheight=0.1)      # Posiciona botão "Retornar"
 
-    def lista_frame_result(self):                                                   # Cria e configura a lista de resultados (Treeview)
-        self.lista_CAP = ttk.Treeview(self.frame_result, height=3,                  # Cria o widget Treeview para resultados
-                                      column=('col1','col2','col3'))                # Define as colunas
-        self.lista_CAP.heading("#0", text="")                                       # Define o cabeçalho da coluna oculta
-        self.lista_CAP.heading("#1", text="A")                                      # Define o cabeçalho da coluna 1
-        self.lista_CAP.heading("#2", text="B")                                      # Define o cabeçalho da coluna 2
-        self.lista_CAP.heading("#3", text="C")                                      # Define o cabeçalho da coluna 3
+        self.botao_limpar = Button(self.frame_info, text='Limpar',bd=4,            # Botão "Limpar"
+                                        font=('Arial',10), command=self.limpa_tela) # Ação de limpar campos
+        self.botao_limpar.place(relx=.80,rely=.01,relwidth=0.15,relheight=0.1)      # Posiciona botão "Limpar"
 
-        self.lista_CAP.column("#0", width=1)                                        # Define a largura da coluna oculta
-        self.lista_CAP.column("#1", width=50)                                       # Define a largura da coluna 1
-        self.lista_CAP.column("#2", width=200)                                      # Define a largura da coluna 2
-        self.lista_CAP.column("#3", width=120)                                      # Define a largura da coluna 3
+        self.botao_calc = Button(self.frame_info, text='Calcular',bd=4,            # Botão "Calcular"
+                                     font=('Arial',10), command=self.calcular)      # Ação de calcular
+        self.botao_calc.place(relx=.8,rely=.85,relwidth=0.15,relheight=0.1)         # Posiciona botão "Calcular"
 
-        self.lista_CAP.place(relx=0.01, rely=0.1, relwidth=0.95, relheight=0.85)    # Posiciona a Treeview
+        # --- Labels e Entradas de Resistências ---
+        Label(self.frame_info, text='Resistências', bg='#BEBEBE').place(relx=0.01,rely=.2) # Label "Resistências"
 
-        self.scrollLista = Scrollbar(self.frame_result, orient='vertical')          # Cria uma barra de rolagem vertical
-        self.lista_CAP.configure(yscroll=self.scrollLista.set)                      # Associa a barra de rolagem à Treeview
-        self.scrollLista.place(relx=0.96, rely=0.1, relwidth=0.02, relheight=0.85)  # Posiciona a barra de rolagem
+        self.lb_ra = Label(self.frame_info, text='Ra (Ohm/unidade)', bg='#BEBEBE') # Label Ra
+        self.lb_ra.place(relx=0.01,rely=.32)
+        self.ra_entry = Entry(self.frame_info)                                      # Campo de entrada Ra
+        self.ra_entry.place(relx=.2,rely=.32,relwidth=0.08)
 
-    def inserir_dados_tabela(self):                                                 # Método para inserir dados na tabela Treeview
-        # Limpa qualquer dado existente na Treeview (útil para atualizações)
-        for i in self.lista_CAP.get_children():                                     # Itera sobre todos os itens
-            self.lista_CAP.delete(i)                                                # Deleta cada item
+        self.lb_rb = Label(self.frame_info, text='Rb (Ohm/unidade)', bg='#BEBEBE') # Label Rb
+        self.lb_rb.place(relx=0.01,rely=.44)
+        self.rb_entry = Entry(self.frame_info)                                      # Campo de entrada Rb
+        self.rb_entry.place(relx=.2,rely=.44,relwidth=0.08)
 
-        # Inserindo os dados conforme solicitado
-        # A primeira coluna "" é para o identificador interno do Treeview.
-        # Os valores da primeira coluna visível ('A') vão para o 'text' do item.
-        # Os valores das colunas seguintes ('B', 'C') vão para o 'values'.
-        self.lista_CAP.insert("", END, text="A", values=("", "", ""))                # Insere linha para 'A'
-        self.lista_CAP.insert("", END, text="B", values=("", "", ""))                # Insere linha para 'B'
-        self.lista_CAP.insert("", END, text="C", values=("", "", ""))                # Insere linha para 'C'
+        self.lb_rc = Label(self.frame_info, text='Rc (Ohm/unidade)', bg='#BEBEBE') # Label Rc
+        self.lb_rc.place(relx=0.01,rely=.56)
+        self.rc_entry = Entry(self.frame_info)                                      # Campo de entrada Rc
+        self.rc_entry.place(relx=.2,rely=.56,relwidth=0.08)
+
+        # --- Labels e Entradas de Raio e RMG ---
+        self.lb_r = Label(self.frame_info, text='Raio Condutor (R) [m]', bg='#BEBEBE') # Label Raio Condutor
+        self.lb_r.place(relx=0.01,rely=.68)
+        self.r_entry = Entry(self.frame_info)                                       # Campo de entrada Raio
+        self.r_entry.place(relx=.2,rely=.68,relwidth=0.08)
+
+        self.lb_rmg = Label(self.frame_info, text='OU RMG [m]', bg='#BEBEBE')       # Label RMG
+        self.lb_rmg.place(relx=0.01,rely=.80)
+        self.rmg_entry = Entry(self.frame_info)                                     # Campo de entrada RMG
+        self.rmg_entry.place(relx=.2,rely=.80,relwidth=0.08)
+
+        # --- Labels e Entradas de Coordenadas ---
+        Label(self.frame_info, text='Coordenadas dos Cabos', bg='#BEBEBE').place(relx=.4,rely=.2) # Label Coordenadas
+
+        self.lb_xa = Label(self.frame_info, text='X_a (m)', bg='#BEBEBE')          # Label Xa
+        self.lb_xa.place(relx=.4,rely=.32)
+        self.xa_entry = Entry(self.frame_info)                                      # Campo de entrada Xa
+        self.xa_entry.place(relx=.48,rely=.32,relwidth=0.08)
+
+        self.lb_xb = Label(self.frame_info, text='X_b (m)', bg='#BEBEBE')          # Label Xb
+        self.lb_xb.place(relx=.4,rely=.44)
+        self.xb_entry = Entry(self.frame_info)                                      # Campo de entrada Xb
+        self.xb_entry.place(relx=.48,rely=.44,relwidth=0.08)
+
+        self.lb_xc = Label(self.frame_info, text='X_c (m)', bg='#BEBEBE')          # Label Xc
+        self.lb_xc.place(relx=.4,rely=.56)
+        self.xc_entry = Entry(self.frame_info)                                      # Campo de entrada Xc
+        self.xc_entry.place(relx=.48,rely=.56,relwidth=0.08)
+
+        self.lb_ha = Label(self.frame_info, text='H_a (m)', bg='#BEBEBE')          # Label Ha
+        self.lb_ha.place(relx=.6,rely=.32)
+        self.ha_entry = Entry(self.frame_info)                                      # Campo de entrada Ha
+        self.ha_entry.place(relx=.68,rely=.32,relwidth=0.08)
+
+        self.lb_hb = Label(self.frame_info, text='H_b (m)', bg='#BEBEBE')          # Label Hb
+        self.lb_hb.place(relx=.6,rely=.44)
+        self.hb_entry = Entry(self.frame_info)                                      # Campo de entrada Hb
+        self.hb_entry.place(relx=.68,rely=.44,relwidth=0.08)
+
+        self.lb_hc = Label(self.frame_info, text='H_c (m)', bg='#BEBEBE')          # Label Hc
+        self.lb_hc.place(relx=.6,rely=.56)
+        self.hc_entry = Entry(self.frame_info)                                      # Campo de entrada Hc
+        self.hc_entry.place(relx=.68,rely=.56,relwidth=0.08)
+
+    def lista_frame_result(self):                                       # Cria e configura a Treeview
+        self.lista_CAP = ttk.Treeview(self.frame_result, height=3,                  # Cria a Treeview
+                                          columns=('col1','col2','col3'))           # Define as colunas
+        self.lista_CAP.heading("#0", text="Fase")                                   # Cabeçalho da coluna "Fase"
+        self.lista_CAP.heading("col1", text="Condutor A")                           # Cabeçalho da coluna 1
+        self.lista_CAP.heading("col2", text="Condutor B")                           # Cabeçalho da coluna 2
+        self.lista_CAP.heading("col3", text="Condutor C")                           # Cabeçalho da coluna 3
+
+        self.lista_CAP.column("#0", width=80, anchor=CENTER)                        # Configura coluna "Fase"
+        self.lista_CAP.column("col1", width=180, anchor=CENTER)                     # Configura coluna 1
+        self.lista_CAP.column("col2", width=180, anchor=CENTER)                     # Configura coluna 2
+        self.lista_CAP.column("col3", width=180, anchor=CENTER)                     # Configura coluna 3
+
+        self.lista_CAP.place(relx=0.01, rely=0.1, relwidth=0.95, relheight=0.85)     # Posiciona a Treeview
+
+        self.scrollLista = Scrollbar(self.frame_result, orient='vertical')          # Cria barra de rolagem
+        self.lista_CAP.configure(yscrollcommand=self.scrollLista.set)               # Associa barra à Treeview
+        self.scrollLista.place(relx=0.96, rely=0.1, relwidth=0.02, relheight=0.85)   # Posiciona a barra
 
 # --- Inicialização ---
-aplicativo()                                                                         # Inicia o aplicativo, criando uma instância da classe
+aplicativo()                                                                        # Inicia o aplicativo
