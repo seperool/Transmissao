@@ -109,24 +109,24 @@ class LongitudinalImageCalculator:
 
         Label(self.frame_info, text='Ra (Ohm/unidade)', bg='#BEBEBE').place(relx=0.01, rely=.32)
         self.ra_entry = Entry(self.frame_info)
-        self.ra_entry.place(relx=.18, rely=.32, relwidth=0.08)
+        self.ra_entry.place(relx=.2, rely=.32, relwidth=0.08)
 
         Label(self.frame_info, text='Rb (Ohm/unidade)', bg='#BEBEBE').place(relx=0.01, rely=.44)
         self.rb_entry = Entry(self.frame_info)
-        self.rb_entry.place(relx=.18, rely=.44, relwidth=0.08)
+        self.rb_entry.place(relx=.2, rely=.44, relwidth=0.08)
 
         Label(self.frame_info, text='Rc (Ohm/unidade)', bg='#BEBEBE').place(relx=0.01, rely=.56)
         self.rc_entry = Entry(self.frame_info)
-        self.rc_entry.place(relx=.18, rely=.56, relwidth=0.08)
+        self.rc_entry.place(relx=.2, rely=.56, relwidth=0.08)
 
         # --- Labels e Entradas de Raio e RMG ---
         Label(self.frame_info, text='Raio Condutor (R) [m]', bg='#BEBEBE').place(relx=0.01, rely=.68)
         self.r_entry = Entry(self.frame_info)
-        self.r_entry.place(relx=.18, rely=.68, relwidth=0.08)
+        self.r_entry.place(relx=.2, rely=.68, relwidth=0.08)
 
         Label(self.frame_info, text='OU RMG [m]', bg='#BEBEBE').place(relx=0.01, rely=.80)
         self.rmg_entry = Entry(self.frame_info)
-        self.rmg_entry.place(relx=.18, rely=.80, relwidth=0.08)
+        self.rmg_entry.place(relx=.2, rely=.80, relwidth=0.08)
 
         # --- Labels e Entradas de Coordenadas ---
         Label(self.frame_info, text='Coordenadas dos Cabos', bg='#BEBEBE').place(relx=.4, rely=.2)
