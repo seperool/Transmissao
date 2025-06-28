@@ -165,6 +165,7 @@ O software será estruturado em duas telas principais para proporcionar uma expe
 * **Diferencial:** Este software pode se diferenciar por oferecer uma suíte de métodos de cálculo abrangente e integrada, superando calculadoras online que geralmente focam em apenas um tipo de cálculo. A capacidade de considerar detalhes como cabos para-raios e condutores em feixe o tornará uma ferramenta mais completa.
 * **Escalabilidade Futura** (Possibilidade de adicionar)**:**
     * Variação flexível do número de cabos de transmissão e de cabos para-raios, oferecendo maior adaptabilidade e precisão para diferentes configurações de linhas.
+    * Seleção de Sistema de Unidades (SI/Imperial): Adição de um botão ou chave (switch) na interface do usuário que permitirá alternar entre o Sistema Internacional de Unidades (SI) e o Sistema Inglês (Imperial). O programa deverá adaptar automaticamente todas as entradas de dados, cálculos internos e exibição de resultados para o sistema de unidades selecionado. Isso incluirá conversões para medidas de comprimento (metros/pés ou milhas), resistências, etc., garantindo flexibilidade para o usuário.
     * Geração de relatórios ou gráficos de desempenho.
     * Capacidade de salvar e carregar projetos de linhas de transmissão.
 * **Requisitos de Conhecimento:** O desenvolvimento exigirá um forte domínio dos princípios de linhas de transmissão, grandezas complexas, álgebra linear e métodos numéricos em engenharia elétrica, além de programação em Python e uso de Tkinter.
