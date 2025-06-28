@@ -22,7 +22,7 @@ def Metodo_Carson_long(ra, rb, rc, xa, xb, xc, ha, hb, hc, R=None, Rmg_val=None)
 
     # --- Constantes Físicas e Elétricas ---
     f = 60  # Frequência (Hz)
-    p = 100 # Permeabilidade relativa do solo (adimensional) - Confirmar o que 'p' representa.
+    p = 100 # Permeabilidade relativa do solo (adimensional)
     mi_0 = 4 * math.pi * (10**(-7)) # Permeabilidade magnética do vácuo (H/m)
     w = 2 * math.pi * f # Frequência angular (rad/s)
 
