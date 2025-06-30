@@ -9,7 +9,6 @@ Estudar:
 Afazeres:
 	- Traduzir para o Python os métodos em Octave
 		- Longitudinais
-			- Carson transposição
 			- Carson com para-raio
 			- Carson feixe de condutor
 			- Impedância de sequência
