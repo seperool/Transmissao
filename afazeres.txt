@@ -1,6 +1,6 @@
-ESCRITO EM 30/06/25
+ESCRITO EM 01/07/25
 ---
-PARA 01/07/25
+PARA 02/07/25
 ---
 Subir github:
 
@@ -9,7 +9,6 @@ Estudar:
 Afazeres:
 	- Traduzir para o Python os métodos em Octave
 		- Longitudinais
-			- Carson com para-raio
 			- Carson feixe de condutor
 			- Impedância de sequência
 		- Transversais
