@@ -2,9 +2,16 @@
 title: "Documento de Planejamento de Software: LinhaMestre"
 subtitle: "Documento de Planejamento de Software: Software de Métodos de Cálculo de Impedâncias e Capacitâncias de Linha de Transmissão"
 author: 
-    - name: "Sergio Pedro Rodrigues Oliveira" 
+    - name: "Sergio Pedro Rodrigues Oliveira"
+      email: seperool@gmail.com
+      affiliations:
+            - CEFET Nova Friburgo 
     - name: "Raphael Mello de Oliveira"
-    - name: "Paulo Victor de Souza Borges" 
+      affiliations:
+            - CEFET Nova Friburgo 
+    - name: "Paulo Victor de Souza Borges"
+      affiliations:
+            - CEFET Nova Friburgo
       roles: "Professor Orientador"
 date: last-modified
 date-format: DD MMMM YYYY
@@ -29,6 +36,10 @@ jupyter: python3
 bibliography: Quarto/pythonbibliografia.bib
 csl: Quarto/abnt.csl
 ---
+
+\thispagestyle{empty}
+\newpage
+\pagenumbering{arabic}
 
 # Visão Geral do Projeto
 
