@@ -5,6 +5,15 @@ from tkinter import messagebox # Importa o módulo messagebox para exibir caixas
 import numpy as np # Importa a biblioteca NumPy para operações com arrays e matrizes, especialmente úteis para números complexos
 import math # Importa o módulo math para funções matemáticas como pi, sqrt e log
 
+# Metodos
+#from imagem import metodo_imagem_long
+#from Carson_correcao import Metodo_Carson_long
+#from Carson_pr import metodo_carson_para_raio
+#from Carson_transposicao import metodo_carson_transp
+#from feixes_de_condutores import calcular_rmg_feixe
+#from componentes_simetricas_sintese
+#from componentes_simetricas_analise
+
 # --- Backend: Lógica de Negócio do Cálculo (Funções Separadas) ---
 
 # Função para o Método Longitudinal Imagem (SEM correção de Carson com rho explícito)
