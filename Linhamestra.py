@@ -4,180 +4,16 @@ from tkinter import messagebox # Importa o módulo messagebox para exibir caixas
 
 import numpy as np # Importa a biblioteca NumPy para operações com arrays e matrizes, especialmente úteis para números complexos
 import math # Importa o módulo math para funções matemáticas como pi, sqrt e log
+import cmath # Importa o módulo cmath para operações com números complexos (fasores).
 
 # Metodos
-#from imagem import metodo_imagem_long
-#from Carson_correcao import Metodo_Carson_long
-#from Carson_pr import metodo_carson_para_raio
-#from Carson_transposicao import metodo_carson_transp
-#from feixes_de_condutores import calcular_rmg_feixe
-#from componentes_simetricas_sintese
-#from componentes_simetricas_analise
-
-# --- Backend: Lógica de Negócio do Cálculo (Funções Separadas) ---
-
-# Função para o Método Longitudinal Imagem (SEM correção de Carson com rho explícito)
-def metodo_imagem_long(ra, rb, rc, xa, ha, xb, hb, xc, hc, R=None, Rmg_val=None):
-    """
-    Calcula a matriz de impedância série por unidade de comprimento de uma linha de transmissão trifásica,
-    utilizando o Método das Imagens para considerar o efeito do solo.
-    Esta versão NÃO usa a resistividade do solo (rho) diretamente como parâmetro.
-    """
-
-    mi_0 = 4 * math.pi * (10**(-7))                                     # Permeabilidade magnética do vácuo (H/m)
-    f = 60                                                              # Frequência do sistema (Hertz)
-    w = 2 * math.pi * f                                                 # Frequência angular (rad/s)
-
-    Rmg = None                                                          # Inicializa o Raio Médio Geométrico (RMG)
-
-    if Rmg_val is not None:                                             # Prioriza RMG_val se fornecido
-        Rmg = Rmg_val
-    elif R is not None:                                                 # Calcula RMG a partir de R se Rmg_val não estiver presente
-        Rmg = R * math.exp(-1/4)
-    
-    if Rmg is None:                                                     # Erro se nenhum raio válido for dado
-        raise ValueError("ERRO! É necessário fornecer o valor do raio do condutor (R) OU o Raio Médio Geométrico (Rmg_val).")
-    if Rmg <= 0:                                                        # Erro se RMG for não positivo
-        raise ValueError("ERRO! O Raio Médio Geométrico (RMG) deve ser um valor positivo.")
-    if ha <= 0 or hb <= 0 or hc <= 0:                                   # Valida alturas positivas para o método da imagem
-        raise ValueError("ERRO! As alturas dos condutores (Ha, Hb, Hc) devem ser maiores que zero para o Método da Imagem.")
-    
-    # --- Cálculo das Distâncias Geométricas ---
-    # Distâncias entre condutores reais
-    dab = np.sqrt(((xa - xb)**2) + ((ha - hb)**2))
-    dac = np.sqrt(((xa - xc)**2) + ((ha - hc)**2))
-    dbc = np.sqrt(((xb - xc)**2) + ((hb - hc)**2))
-    
-    # Distâncias entre condutor real e imagem do outro condutor
-    dab_l = np.sqrt(((xa - xb)**2) + ((ha + hb)**2))
-    dac_l = np.sqrt(((xa - xc)**2) + ((ha + hc)**2))
-    dbc_l = np.sqrt(((xb - xc)**2) + ((hb + hc)**2))
-    
-    # --- Cálculo das Impedâncias Série (por unidade de comprimento em Ohms/metro) ---
-    # As resistências ra, rb, rc são consideradas Ohms/metro se o resultado for Ohms/metro
-    Zaa_m = ra + (((1j * mi_0 * w) / (2 * math.pi)) * math.log((2 * ha) / Rmg))
-    Zbb_m = rb + (((1j * mi_0 * w) / (2 * math.pi)) * math.log((2 * hb) / Rmg))
-    Zcc_m = rc + (((1j * mi_0 * w) / (2 * math.pi)) * math.log((2 * hc) / Rmg))
-    
-    Zab_m = ((1j * w * mi_0) / (2 * math.pi)) * (math.log(dab_l / dab))
-    Zac_m = ((1j * w * mi_0) / (2 * math.pi)) * (math.log(dac_l / dac))
-    Zbc_m = ((1j * w * mi_0) / (2 * math.pi)) * (math.log(dbc_l / dbc))
-    
-    Zba_m = Zab_m
-    Zca_m = Zac_m
-    Zcb_m = Zbc_m
-    
-    # --- Montagem da Matriz de Impedância da Linha ---
-    # Retorna a matriz em Ohms/km
-    Z = np.array([
-        [Zaa_m, Zab_m, Zac_m],
-        [Zba_m, Zbb_m, Zbc_m],
-        [Zca_m, Zcb_m, Zcc_m]
-    ]) * 1000 # Converte Ohms/metro para Ohms/km
-
-    return Z
-
-# Função para o Método de Carson Longitudinal (COM correção de resistividade do solo)
-def Metodo_Carson_long(ra, rb, rc, xa, xb, xc, ha, hb, hc, rho, R=None, Rmg_val=None):
-    """
-    Método de Carson com correção para cálculo de impedâncias longitudinais
-    em linhas de transmissão trifásicas, sem cabo para-raio.
-
-    Parâmetros:
-    ra, rb, rc (float): Resistência ôhmica por unidade de comprimento dos condutores A, B, C (Ohms/metro).
-                        É crucial que estas resistências estejam em Ohms por metro para consistência com as constantes.
-    xa, xb, xc (float): Coordenadas horizontais (X) dos condutores A, B, C (metros).
-    ha, hb, hc (float): Coordenadas verticais (altura H) dos condutores A, B, C (metros).
-    rho (float): Resistividade do solo (Ohms-metro). Variável de entrada crucial para a correção de Carson.
-    R (float, opcional): Raio físico do condutor (metros). Usado para calcular o RMG se Rmg_val não for fornecido.
-    Rmg_val (float, opcional): Raio Médio Geométrico (RMG) do condutor (metros). Se fornecido, R é ignorado,
-                                pois o RMG é mais preciso para cabos trançados.
-
-    Retorna:
-    numpy.ndarray: Matriz de impedância 3x3 complexa (Ohms/km).
-
-    Raises:
-    ValueError: Se nem R nem Rmg_val forem fornecidos, ou se RMG, rho, ou qualquer altura for não positivo.
-    """
-
-    # --- Constantes Físicas e Elétricas ---
-    f = 60                                          # Frequência do sistema (Hz). Padrão no Brasil e em outras regiões.
-    mi_0 = 4 * math.pi * (10**(-7))                 # Permeabilidade magnética do vácuo (H/m). Constante física fundamental.
-    w = 2 * math.pi * f                             # Frequência angular (rad/s). Usada nos cálculos de reatância indutiva.
-
-    # --- Termos de Correção do Método de Carson para o Solo ---
-    # rd: Termo de resistência de Carson (Ohms/m) que representa a parcela de resistência adicionada
-    # devido ao retorno da corrente pelo solo com resistividade finita. É um termo constante.
-    rd = 9.869 * (10**(-7)) * f                     # Ohms/m. Esta é uma aproximação amplamente usada para 50/60 Hz.
-
-    # De: Distância de retorno equivalente do solo (metros).
-    # É uma profundidade fictícia do plano de retorno da corrente no solo,
-    # que encapsula o efeito da resistividade finita do solo.
-    # A constante 659 é apropriada para rho em Ohm-m e f em Hz, resultando em De em metros.
-    De = 659 * (math.sqrt(rho / f))                 # Metros
-
-    # --- Cálculo do Raio Médio Geométrico (RMG) ---
-    Rmg = None # Inicializa RMG como None para verificar se foi calculado ou fornecido
-    if Rmg_val is not None:
-        Rmg = Rmg_val # Se o RMG já foi fornecido, usa-o diretamente
-    elif R is not None:
-        # Se o raio físico (R) foi fornecido, calcula o RMG.
-        # Para condutores sólidos ou simples, RMG = R * e^(-1/4).
-        # Para condutores trançados (como ACSR), o RMG geralmente é um valor tabelado pelo fabricante.
-        Rmg = R * math.exp(-1/4)
-    
-    # --- Validações de Entrada ---
-    # Estas verificações garantem que os valores de entrada são válidos para o cálculo.
-    if Rmg is None:
-        raise ValueError("ERRO! É necessário fornecer o raio do condutor (R) OU o Raio Médio Geométrico (Rmg_val).")
-    if Rmg <= 0:
-        raise ValueError("ERRO! O Raio Médio Geométrico (RMG) deve ser um valor positivo.")
-    if rho <= 0:
-        raise ValueError("ERRO! A resistividade do solo (rho) deve ser um valor positivo.")
-    if ha <= 0 or hb <= 0 or hc <= 0:
-        # As alturas devem ser positivas para o uso do logaritmo (ln(De/H)) no cálculo da impedância própria.
-        raise ValueError("ERRO! As alturas dos condutores (Ha, Hb, Hc) devem ser maiores que zero.")
-
-    # --- Cálculo das Distâncias Geométricas entre os condutores ---
-    # As distâncias entre os centros dos condutores reais são calculadas usando a fórmula da distância euclidiana 2D.
-    dab = np.sqrt(((xa - xb)**2) + ((ha - hb)**2)) # Distância entre condutores A e B
-    dac = np.sqrt(((xa - xc)**2) + ((ha - hc)**2)) # Distância entre condutores A e C
-    dbc = np.sqrt(((xb - xc)**2) + ((hb - hc)**2)) # Distância entre condutores B e C
-
-    # --- Cálculo das Impedâncias Próprias e Mútuas (por metro) ---
-    # As fórmulas de Carson geralmente resultam em impedâncias por metro.
-    # Impedâncias Próprias (Zii): Representam a impedância de um condutor em relação ao retorno pelo solo.
-    # Zii = Ri_condutor + R_terra_Carson + j * X_terra_propria_Carson
-    # R_terra_Carson é o termo 'rd'. X_terra_propria_Carson é a parte logarítmica com De/RMG.
-    Zaa = ra + rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / Rmg)
-    Zbb = rb + rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / Rmg)
-    Zcc = rc + rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / Rmg)
-
-    # Impedâncias Mútuas (Zij): Representam o acoplamento eletromagnético entre dois condutores,
-    # considerando o retorno pelo solo.
-    # Zij = R_terra_Carson + j * X_terra_mutua_Carson
-    # R_terra_Carson é o termo 'rd'. X_terra_mutua_Carson é a parte logarítmica com De/dij.
-    Zab = rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / dab) # Impedância mútua entre A e B
-    Zac = rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / dac) # Impedância mútua entre A e C
-    Zbc = rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / dbc) # Impedância mútua entre B e C
-
-    # As impedâncias mútuas são simétricas na matriz de impedância de fase (Zij = Zji).
-    Zba = Zab
-    Zca = Zac
-    Zcb = Zbc
-
-    # --- Construção da Matriz de Impedância ---
-    # Monta a matriz 3x3 de impedâncias de fase.
-    # Cada elemento [i, j] da matriz representa a impedância entre a fase i e a fase j.
-    # Multiplica a matriz inteira por 1000 para converter de Ohms/metro para Ohms/km.
-    Z = np.array([
-        [Zaa, Zab, Zac],
-        [Zba, Zbb, Zbc],
-        [Zca, Zcb, Zcc]
-    ]) * 1000 # Converter para Ohms/km
-
-    return Z # Retorna a matriz de impedância longitudinal da linha
-
+from longitudinais.imagem import metodo_imagem_long
+from longitudinais.Carson_correcao import Metodo_Carson_long
+from longitudinais.Carson_pr import metodo_carson_para_raio
+#from longitudinais.Carson_transposicao import metodo_carson_transp
+#from longitudinais.feixes_de_condutores import calcular_rmg_feixe
+#from longitudinais.componentes_simetricas_sintese import comp_sim_sintese
+#from longitudinais.componentes_simetricas_analise import comp_sim_analise
 
 # --- Classe para a Tela de Cálculo do Método das Imagens Longitudinais (Mantida para o método "Longitudinal Imagem") ---
 class LongitudinalImageCalculator:
@@ -596,6 +432,274 @@ class CarsonLongitudinalCalculator:
                 row_values.append(formatted_value)
             self.lista_CAP.insert("", END, text=row_label, values=tuple(row_values))
 
+# --- Classe para a Tela de Cálculo do Método de Carson com Cabo Para-Raio ---
+class CarsonGroundWireCalculator:
+    def __init__(self, master_window):
+        self.master_window = master_window  # Armazena a janela principal para retornar
+        self.calc_window = Toplevel(master_window)  # Cria uma nova janela Toplevel para este método
+        
+        self._setup_window()  # Configura propriedades da janela
+        self._setup_frames()  # Cria e posiciona os frames
+        self._setup_widgets() # Cria e posiciona os widgets de entrada e botões
+        self._setup_treeview() # Configura a Treeview para exibir a matriz Z
+
+        # Preenche a Treeview com campos vazios ao iniciar a janela
+        self._insert_data_to_treeview(np.full((3, 3), np.nan, dtype=complex))
+
+    def _setup_window(self):
+        self.calc_window.title("Cálculo de Impedância - Método de Carson com Cabo Para-Raio") # Título da janela
+        self.calc_window.geometry("850x550") # Dimensões da janela (um pouco maior para mais campos)
+        self.calc_window.configure(background='#2F4F4F') # Cor de fundo
+        self.calc_window.resizable(False, False) # Impede redimensionamento
+        self.calc_window.protocol("WM_DELETE_WINDOW", self._on_closing) # Gerencia fechamento da janela
+
+    def _on_closing(self):
+        self.calc_window.destroy()  # Destroi a janela de cálculo atual
+        self.master_window.deiconify() # Reexibe a janela principal
+
+    def _setup_frames(self):
+        # Frame superior para entradas de dados
+        self.frame_info = Frame(self.calc_window, bd=4, bg='#BEBEBE', highlightthickness=3)
+        self.frame_info.place(relx=0.02, rely=0.02, relwidth=0.96, relheight=0.5) # Um pouco maior
+
+        # Frame inferior para os resultados (Treeview)
+        self.frame_result = Frame(self.calc_window, bd=4, bg='#BEBEBE', highlightthickness=3)
+        self.frame_result.place(relx=0.02, rely=0.54, relwidth=0.96, relheight=0.44) # Ajustado
+
+    def _setup_widgets(self):
+        # --- Botões ---
+        self.botao_return = Button(self.frame_info, text='Retornar', bd=4,
+                                   font=('Arial',10), command=self._on_closing)
+        self.botao_return.place(relx=.01, rely=.01, relwidth=0.12, relheight=0.08)
+
+        self.botao_limpar = Button(self.frame_info, text='Limpar', bd=4,
+                                   font=('Arial',10), command=self._clear_inputs)
+        self.botao_limpar.place(relx=.87, rely=.01, relwidth=0.12, relheight=0.08)
+
+        self.botao_calc = Button(self.frame_info, text='Calcular', bd=4,
+                                 font=('Arial',10), command=self._calculate_impedance)
+        self.botao_calc.place(relx=.87, rely=.89, relwidth=0.12, relheight=0.08)
+
+        # --- Labels e Entradas de Resistências (Fases e Para-Raio) ---
+        Label(self.frame_info, text='Resistências (Ohm/km)', bg='#BEBEBE', font=('Arial', 9, 'bold')).place(relx=0.01, rely=.12)
+
+        Label(self.frame_info, text='Ra:', bg='#BEBEBE').place(relx=0.01, rely=.2)
+        self.ra_entry = Entry(self.frame_info)
+        self.ra_entry.place(relx=.08, rely=.2, relwidth=0.08)
+
+        Label(self.frame_info, text='Rb:', bg='#BEBEBE').place(relx=0.01, rely=.28)
+        self.rb_entry = Entry(self.frame_info)
+        self.rb_entry.place(relx=.08, rely=.28, relwidth=0.08)
+
+        Label(self.frame_info, text='Rc:', bg='#BEBEBE').place(relx=0.01, rely=.36)
+        self.rc_entry = Entry(self.frame_info)
+        self.rc_entry.place(relx=.08, rely=.36, relwidth=0.08)
+        
+        Label(self.frame_info, text='Rp:', bg='#BEBEBE').place(relx=0.01, rely=.44)
+        self.rp_entry = Entry(self.frame_info)
+        self.rp_entry.place(relx=.08, rely=.44, relwidth=0.08)
+
+
+        # --- Labels e Entradas de Raio e RMG ---
+        Label(self.frame_info, text='Raio Condutor (R) [m]', bg='#BEBEBE').place(relx=0.01, rely=.55)
+        self.r_entry = Entry(self.frame_info)
+        self.r_entry.place(relx=.18, rely=.55, relwidth=0.08)
+
+        Label(self.frame_info, text='OU RMG [m]', bg='#BEBEBE').place(relx=0.01, rely=.63)
+        self.rmg_entry = Entry(self.frame_info)
+        self.rmg_entry.place(relx=.18, rely=.63, relwidth=0.08)
+
+        # --- Entrada de Resistividade do Solo ---
+        Label(self.frame_info, text='Resistividade Solo (rho) [Ohm.m]', bg='#BEBEBE', font=('Arial', 9, 'bold')).place(relx=0.01, rely=.75)
+        self.rho_entry = Entry(self.frame_info)
+        self.rho_entry.place(relx=.28, rely=.75, relwidth=0.08)
+
+
+        # --- Labels e Entradas de Coordenadas (X, H) para Fases e Para-Raio ---
+        Label(self.frame_info, text='Coordenadas dos Condutores (m)', bg='#BEBEBE', font=('Arial', 9, 'bold')).place(relx=.4, rely=.12)
+
+        # Fase A
+        Label(self.frame_info, text='Xa:', bg='#BEBEBE').place(relx=.4, rely=.2)
+        self.xa_entry = Entry(self.frame_info)
+        self.xa_entry.place(relx=.48, rely=.2, relwidth=0.08)
+        Label(self.frame_info, text='Ha:', bg='#BEBEBE').place(relx=.6, rely=.2)
+        self.ha_entry = Entry(self.frame_info)
+        self.ha_entry.place(relx=.68, rely=.2, relwidth=0.08)
+
+        # Fase B
+        Label(self.frame_info, text='Xb:', bg='#BEBEBE').place(relx=.4, rely=.28)
+        self.xb_entry = Entry(self.frame_info)
+        self.xb_entry.place(relx=.48, rely=.28, relwidth=0.08)
+        Label(self.frame_info, text='Hb:', bg='#BEBEBE').place(relx=.6, rely=.28)
+        self.hb_entry = Entry(self.frame_info)
+        self.hb_entry.place(relx=.68, rely=.28, relwidth=0.08)
+
+        # Fase C
+        Label(self.frame_info, text='Xc:', bg='#BEBEBE').place(relx=.4, rely=.36)
+        self.xc_entry = Entry(self.frame_info)
+        self.xc_entry.place(relx=.48, rely=.36, relwidth=0.08)
+        Label(self.frame_info, text='Hc:', bg='#BEBEBE').place(relx=.6, rely=.36)
+        self.hc_entry = Entry(self.frame_info)
+        self.hc_entry.place(relx=.68, rely=.36, relwidth=0.08)
+
+        # Para-raio P
+        Label(self.frame_info, text='Xp:', bg='#BEBEBE').place(relx=.4, rely=.44)
+        self.xp_entry = Entry(self.frame_info)
+        self.xp_entry.place(relx=.48, rely=.44, relwidth=0.08)
+        Label(self.frame_info, text='Hp:', bg='#BEBEBE').place(relx=.6, rely=.44)
+        self.hp_entry = Entry(self.frame_info)
+        self.hp_entry.place(relx=.68, rely=.44, relwidth=0.08)
+        
+    def _setup_treeview(self):
+        # Configuração da Treeview para exibir a matriz de impedância (Z_matrix)
+        self.lista_impedancias = ttk.Treeview(self.frame_result, height=3,
+                                             columns=('col1','col2','col3'))
+        self.lista_impedancias.heading("#0", text="Fase")
+        self.lista_impedancias.heading("col1", text="Condutor A")
+        self.lista_impedancias.heading("col2", text="Condutor B")
+        self.lista_impedancias.heading("col3", text="Condutor C")
+
+        self.lista_impedancias.column("#0", width=80, anchor=CENTER)
+        self.lista_impedancias.column("col1", width=180, anchor=CENTER)
+        self.lista_impedancias.column("col2", width=180, anchor=CENTER)
+        self.lista_impedancias.column("col3", width=180, anchor=CENTER)
+
+        self.lista_impedancias.place(relx=0.01, rely=0.1, relwidth=0.95, relheight=0.85)
+
+        self.scrollLista = Scrollbar(self.frame_result, orient='vertical')
+        self.lista_impedancias.configure(yscrollcommand=self.scrollLista.set)
+        self.scrollLista.place(relx=0.96, rely=0.1, relwidth=0.02, relheight=0.85)
+
+    def _clear_inputs(self):
+        # Limpa todos os campos de entrada e a Treeview
+        self.ra_entry.delete(0, END)
+        self.rb_entry.delete(0, END)
+        self.rc_entry.delete(0, END)
+        self.rp_entry.delete(0, END) # Novo campo para o para-raio
+        self.r_entry.delete(0, END)
+        self.rmg_entry.delete(0, END)
+        self.rho_entry.delete(0, END) # Novo campo para resistividade
+        self.xa_entry.delete(0, END)
+        self.xb_entry.delete(0, END)
+        self.xc_entry.delete(0, END)
+        self.xp_entry.delete(0, END) # Novo campo para o para-raio
+        self.ha_entry.delete(0, END)
+        self.hb_entry.delete(0, END)
+        self.hc_entry.delete(0, END)
+        self.hp_entry.delete(0, END) # Novo campo para o para-raio
+        
+        # Limpa a Treeview preenchendo com valores NaN (que serão exibidos como vazio)
+        self._insert_data_to_treeview(np.full((3, 3), np.nan, dtype=complex))
+
+    def _get_input_values(self):
+        """
+        Extrai e valida os valores de entrada dos campos da GUI.
+        Converte resistências de Ohm/km para Ohm/m.
+        """
+        try:
+            # Resistências do condutor em Ohms/km (assumindo input do usuário)
+            ra_km = float(self.ra_entry.get()) if self.ra_entry.get() else 0.0
+            rb_km = float(self.rb_entry.get()) if self.rb_entry.get() else 0.0
+            rc_km = float(self.rc_entry.get()) if self.rc_entry.get() else 0.0
+            rp_km = float(self.rp_entry.get()) if self.rp_entry.get() else 0.0 # Resistência do para-raio
+
+            # Convertendo para Ohms/metro, pois a função `metodo_carson_para_raio` espera Ohms/metro
+            ra = ra_km / 1000.0
+            rb = rb_km / 1000.0
+            rc = rc_km / 1000.0
+            rp = rp_km / 1000.0 # Resistência do para-raio em Ohm/m
+
+            R_val = float(self.r_entry.get()) if self.r_entry.get() else None
+            Rmg_val = float(self.rmg_entry.get()) if self.rmg_entry.get() else None
+            
+            rho = float(self.rho_entry.get()) if self.rho_entry.get() else None # Resistividade do solo
+
+            # Coordenadas X
+            xa = float(self.xa_entry.get()) if self.xa_entry.get() else 0.0
+            xb = float(self.xb_entry.get()) if self.xb_entry.get() else 0.0
+            xc = float(self.xc_entry.get()) if self.xc_entry.get() else 0.0
+            xp = float(self.xp_entry.get()) if self.xp_entry.get() else 0.0 # Coordenada X do para-raio
+
+            # Coordenadas H (altura)
+            ha = float(self.ha_entry.get()) if self.ha_entry.get() else 0.0
+            hb = float(self.hb_entry.get()) if self.hb_entry.get() else 0.0
+            hc = float(self.hc_entry.get()) if self.hc_entry.get() else 0.0
+            hp = float(self.hp_entry.get()) if self.hp_entry.get() else 0.0 # Coordenada H do para-raio
+            
+            # Validação específica para rho, pois a função `metodo_carson_para_raio` espera um valor válido
+            if rho is None:
+                raise ValueError("A resistividade do solo (rho) é um campo obrigatório.")
+            
+            return {
+                'ra': ra, 'rb': rb, 'rc': rc, 'rp': rp, # Incluindo rp
+                'xa': xa, 'ha': ha,
+                'xb': xb, 'hb': hb,
+                'xc': xc, 'hc': hc,
+                'xp': xp, 'hp': hp, # Incluindo coordenadas do para-raio
+                'rho': rho, # Incluindo rho
+                'R': R_val, 'Rmg_val': Rmg_val
+            }
+        except ValueError as e:
+            messagebox.showerror("Erro de Entrada", f"Por favor, insira valores numéricos válidos. Detalhes: {e}")
+            return None
+
+    def _calculate_impedance(self):
+        """
+        Coleta os inputs, chama a função de cálculo do Método de Carson com Para-Raio,
+        e exibe os resultados na Treeview.
+        """
+        params = self._get_input_values()
+        if params is None:
+            return # Sai se houver erro na validação dos inputs
+
+        try:
+            # Chama a função específica para "Carson com Cabo Para-Raio"
+            Z_matrix = metodo_carson_para_raio(
+                ra=params['ra'], rb=params['rb'], rc=params['rc'], rp=params['rp'],
+                xa=params['xa'], ha=params['ha'],
+                xb=params['xb'], hb=params['hb'],
+                xc=params['xc'], hc=params['hc'],
+                xp=params['xp'], hp=params['hp'], # Passa os parâmetros do para-raio
+                rho=params['rho'], # Passa a resistividade do solo
+                R=params['R'], Rmg_val=params['Rmg_val']
+            )
+            self._insert_data_to_treeview(Z_matrix)
+            messagebox.showinfo("Cálculo Concluído", "A matriz de impedância Zp foi calculada e exibida na tabela.")
+        except ValueError as e:
+            messagebox.showerror("Erro de Cálculo", f"Ocorreu um erro durante o cálculo: {e}")
+        except Exception as e:
+            messagebox.showerror("Erro Inesperado", f"Ocorreu um erro inesperado: {e}")
+
+    def _insert_data_to_treeview(self, Z_matrix):
+        """
+        Limpa a Treeview e insere os valores da matriz de impedância.
+        Formata números complexos para exibição.
+        """
+        # Limpa todas as entradas existentes na Treeview
+        for i in self.lista_impedancias.get_children():
+            self.lista_impedancias.delete(i)
+        
+        complex_format = "({:.6f} + j{:.6f})" # Formato para exibir números complexos com 6 casas decimais
+        row_labels = ["Zaa", "Zbb", "Zcc"] # Rótulos para as linhas da matriz (fases)
+        # Note que a matriz de saída do método de Kron é 3x3 (Zaa, Zbb, Zcc, Zab, etc.)
+        # As linhas representam a primeira fase do termo (por exemplo, Z_linha_A)
+
+        for i, row_label in enumerate(row_labels):
+            # Obtém os valores da linha da matriz (Z_matrix[i, :])
+            # e os formata como strings para exibição na Treeview.
+            row_values = []
+            for j in range(Z_matrix.shape[1]):
+                complex_num = Z_matrix[i, j]
+                # Verifica se o número é NaN (Not a Number), o que ocorre em entradas vazias iniciais
+                if np.isnan(complex_num.real) and np.isnan(complex_num.imag):
+                    formatted_value = "" # Exibe vazio se for NaN
+                else:
+                    formatted_value = complex_format.format(complex_num.real, complex_num.imag)
+                row_values.append(formatted_value)
+            
+            # Insere a linha na Treeview
+            self.lista_impedancias.insert("", END, text=row_label, values=tuple(row_values))
+
 
 # --- Classe Principal da Aplicação (Tela de Seleção de Métodos) ---
 class AppMain:
@@ -648,6 +752,9 @@ class AppMain:
         elif selected_method == "Longitudinal Carson (Correção)": # Nova condição para o método de Carson
             self.root.withdraw() # Esconde a janela principal
             CarsonLongitudinalCalculator(self.root) # Instancia a nova janela de Carson
+        elif selected_method == "Longitudinal Carson para-raio": # Nova condição para o método de Carson
+            self.root.withdraw() # Esconde a janela principal
+            CarsonGroundWireCalculator(self.root) # Instancia a nova janela de Carson
         else:
             messagebox.showinfo("Método Não Implementado", f"O método '{selected_method}' ainda não foi implementado. Por favor, selecione 'Longitudinal Imagem' ou 'Longitudinal Carson (Correção)'.")
 
