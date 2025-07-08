@@ -10,8 +10,11 @@ import numpy as np # Importa a biblioteca NumPy para operações com arrays e ma
 import math # Importa o módulo math para funções matemáticas como pi, sqrt e log
 import cmath # Importa o módulo cmath para operações com números complexos (fasores).
 
-# Importando Métodos
+# Importando Métodos de Cálculo
 
+## Longitudinais
+# Importa funções específicas para cálculos de impedância longitudinal,
+# agrupadas por diferentes métodos e considerações.
 from longitudinais.imagem import metodo_imagem_long
 from longitudinais.Carson_correcao import Metodo_Carson_long
 from longitudinais.Carson_pr import metodo_carson_para_raio
@@ -20,7 +23,7 @@ from longitudinais.feixes_de_condutores import calcular_rmg_feixe
 from longitudinais.componentes_simetricas_sintese import comp_sim_sintese
 from longitudinais.componentes_simetricas_analise import comp_sim_analise
 
-#Janelas
+# Classes de Janelas da Interface Gráfica
 
 # --- Classe para a Tela de Cálculo do Método das Imagens Longitudinais (Mantida para o método "Longitudinal Imagem") ---
 class LongitudinalImageCalculator:
@@ -224,7 +227,7 @@ class LongitudinalImageCalculator:
                     formatted_value = complex_format.format(complex_num.real, complex_num.imag)
                 row_values.append(formatted_value)
             self.lista_CAP.insert("", END, text=row_label, values=tuple(row_values))
-            
+
 # --- Classe para a Tela de Cálculo do Método de Carson Longitudinal (COM CORREÇÃO DE SOLO) ---
 class CarsonLongitudinalCalculator:
     def __init__(self, master_window):
