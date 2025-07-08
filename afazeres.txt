@@ -16,10 +16,7 @@ Afazeres:
 			- Feixe de condutor
 			- Impedância de sequência
 	- Adicionar funções dos metodos no aplicativo
-		- Longitudinais
-			- Carson transposição
-			- Carson feixe de condutor
-			- Impedância de sequência
+		- Longitudinais ok
 		- Transversais
 			- Imagem
 			- Transposição
@@ -27,11 +24,12 @@ Afazeres:
 			- Feixe de condutor
 			- Impedância de sequência
 	- Janela principal
-		- selecionar o método e botão ok, envia para a janela do metodo especifico
+		- selecionar o método e botão ok, envia para a janela do metodo especifico ok
 	- Janela do método
 		- Botão "calcular" pegar os inputs do usuário, calcular o metodo, devolver a tabela com os resultados.
 			- Pegar input do usuário
 			- Chamar o mátodo (calcular o método)*
 			- Devolver tabela com resultados na área de resultados
 	- Testes
+		- Testar janela por janela
 	- Mensagens de erro
