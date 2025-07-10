@@ -1,6 +1,6 @@
-ESCRITO EM 08/07/25
+ESCRITO EM 10/07/25
 ---
-PARA 09/07/25
+PARA 11/07/25
 ---
 Subir github:
 
@@ -9,19 +9,10 @@ Estudar:
 Afazeres:
 	- Traduzir para o Python os métodos em Octave
 		- Longitudinais ok
-		- Transversais
-			- Imagens
-			- Transposição
-			- Para-raio
-			- Feixe de condutor
-			- Impedância de sequência
+		- Transversais ok
 	- Adicionar funções dos metodos no aplicativo
 		- Longitudinais ok
 		- Transversais
-			- Imagem
-			- Transposição
-			- Para-raio
-			- Feixe de condutor
 			- Impedância de sequência
 	- Janela principal
 		- selecionar o método e botão ok, envia para a janela do metodo especifico ok
