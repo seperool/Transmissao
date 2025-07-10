@@ -84,4 +84,3 @@ def metodo_capacitancia_sequencia_tran(
     C0_farads = C_AA + 2 * C_AB
 
     return C_matrix_farads, C1_farads, C0_farads
-

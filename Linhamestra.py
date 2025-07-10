@@ -1920,6 +1920,660 @@ class TransposedCapacitanceCalculator:
                 row_values.append(formatted_value)
             self.lista_CAP.insert("", END, text=row_label, values=tuple(row_values))
 
+# --- CLASSE DA JANELA PARA CÁLCULO DE CAPACITÂNCIA COM CABO PARA-RAIO ---
+class CapacitanceGroundWireCalculator:
+    def __init__(self, master_window):
+        self.master_window = master_window
+        self.calc_window = Toplevel(master_window)
+        self._setup_window()
+        self._setup_frames()
+        self._setup_widgets()
+        self._setup_treeview()
+
+        # Adiciona campos de entrada dinâmicos para os para-raios
+        self.num_pr_entries = [] # Para armazenar as Entries para X e H de cada para-raio
+        self.r_pr_entries = []   # Para armazenar as Entries para os raios de cada para-raio
+        self.add_pr_fields(1) # Começa com 1 cabo para-raio por padrão
+
+        # Preenche a Treeview com campos vazios ao iniciar a janela
+        self._insert_data_to_treeview(np.full((3, 3), np.nan, dtype=float))
+
+    def _setup_window(self):
+        self.calc_window.title("Cálculo de Capacitância - Com Cabo Para-Raio")
+        self.calc_window.geometry("1000x750") # Aumenta bastante para acomodar todos os campos
+        self.calc_window.configure(background='#2F4F4F')
+        self.calc_window.resizable(False, False)
+        self.calc_window.protocol("WM_DELETE_WINDOW", self._on_closing)
+
+    def _on_closing(self):
+        self.calc_window.destroy()
+        self.master_window.deiconify() # Reexibe a janela principal
+
+    def _setup_frames(self):
+        self.frame_info = Frame(self.calc_window, bd=4, bg='#BEBEBE', highlightthickness=3)
+        self.frame_info.place(relx=0.02, rely=0.02, relwidth=0.96, relheight=0.6) # Mais alto
+
+        self.frame_result = Frame(self.calc_window, bd=4, bg='#BEBEBE', highlightthickness=3)
+        self.frame_result.place(relx=0.02, rely=0.64, relwidth=0.96, relheight=0.34) # Ajusta posição e altura
+
+    def _setup_widgets(self):
+        # --- Botões ---
+        self.botao_return = Button(self.frame_info, text='Retornar', bd=4,
+                                   font=('Arial',10), command=self._on_closing)
+        self.botao_return.place(relx=.01, rely=.01, relwidth=0.1, relheight=0.05)
+
+        self.botao_limpar = Button(self.frame_info, text='Limpar', bd=4,
+                                   font=('Arial',10), command=self._clear_inputs)
+        self.botao_limpar.place(relx=.9, rely=.01, relwidth=0.08, relheight=0.05)
+
+        self.botao_calc = Button(self.frame_info, text='Calcular', bd=4,
+                                 font=('Arial',10), command=self._calculate_capacitance_ground_wire)
+        self.botao_calc.place(relx=.9, rely=.92, relwidth=0.08, relheight=0.05)
+
+        # --- Seção para Raios dos Condutores de Fase ---
+        Label(self.frame_info, text='Raios Condutores Fase (m)', bg='#BEBEBE', font=('Arial', 10, 'bold')).place(relx=0.01, rely=.08)
+        Label(self.frame_info, text='Ra:', bg='#BEBEBE').place(relx=0.01, rely=.12)
+        self.ra_entry = Entry(self.frame_info, width=8)
+        self.ra_entry.place(relx=.05, rely=.12)
+        Label(self.frame_info, text='Rb:', bg='#BEBEBE').place(relx=0.01, rely=.16)
+        self.rb_entry = Entry(self.frame_info, width=8)
+        self.rb_entry.place(relx=.05, rely=.16)
+        Label(self.frame_info, text='Rc:', bg='#BEBEBE').place(relx=0.01, rely=.20)
+        self.rc_entry = Entry(self.frame_info, width=8)
+        self.rc_entry.place(relx=.05, rely=.20)
+
+        # --- Seção para Posições Físicas das Fases ---
+        Label(self.frame_info, text='Posições Físicas das Fases (m)', bg='#BEBEBE', font=('Arial', 10, 'bold')).place(relx=.2, rely=.08)
+
+        Label(self.frame_info, text='Posição 1 (X, H)', bg='#BEBEBE').place(relx=.2, rely=.12)
+        self.xa_pos1_entry = Entry(self.frame_info, width=8)
+        self.xa_pos1_entry.place(relx=.32, rely=.12)
+        self.ha_pos1_entry = Entry(self.frame_info, width=8)
+        self.ha_pos1_entry.place(relx=.38, rely=.12)
+
+        Label(self.frame_info, text='Posição 2 (X, H)', bg='#BEBEBE').place(relx=.2, rely=.16)
+        self.xb_pos2_entry = Entry(self.frame_info, width=8)
+        self.xb_pos2_entry.place(relx=.32, rely=.16)
+        self.hb_pos2_entry = Entry(self.frame_info, width=8)
+        self.hb_pos2_entry.place(relx=.38, rely=.16)
+
+        Label(self.frame_info, text='Posição 3 (X, H)', bg='#BEBEBE').place(relx=.2, rely=.20)
+        self.xc_pos3_entry = Entry(self.frame_info, width=8)
+        self.xc_pos3_entry.place(relx=.32, rely=.20)
+        self.hc_pos3_entry = Entry(self.frame_info, width=8)
+        self.hc_pos3_entry.place(relx=.38, rely=.20)
+
+        # --- Seção para Resistividade do Solo ---
+        Label(self.frame_info, text='Resistividade Solo (rho) [Ohm.m]:', bg='#BEBEBE', font=('Arial', 10, 'bold')).place(relx=0.01, rely=.28)
+        self.rho_entry = Entry(self.frame_info, width=8)
+        self.rho_entry.place(relx=.25, rely=.28)
+
+        # --- Seção para Comprimentos das Seções ---
+        Label(self.frame_info, text='Comprimentos das Seções (m)', bg='#BEBEBE', font=('Arial', 10, 'bold')).place(relx=0.01, rely=.35)
+        Label(self.frame_info, text='L1 (m):', bg='#BEBEBE').place(relx=.01, rely=.39)
+        self.l1_entry = Entry(self.frame_info, width=8)
+        self.l1_entry.place(relx=.08, rely=.39)
+
+        Label(self.frame_info, text='L2 (m):', bg='#BEBEBE').place(relx=.01, rely=.43)
+        self.l2_entry = Entry(self.frame_info, width=8)
+        self.l2_entry.place(relx=.08, rely=.43)
+
+        Label(self.frame_info, text='L3 (m):', bg='#BEBEBE').place(relx=.01, rely=.47)
+        self.l3_entry = Entry(self.frame_info, width=8)
+        self.l3_entry.place(relx=.08, rely=.47)
+
+        # --- Seção para Cabos Para-Raios (Dinâmica) ---
+        Label(self.frame_info, text='Cabos Para-Raios (Raio, Posição 1 X, Posição 1 H, ...)', bg='#BEBEBE', font=('Arial', 10, 'bold')).place(relx=0.01, rely=.55)
+
+        self.pr_frame = Frame(self.frame_info, bg='#BEBEBE')
+        self.pr_frame.place(relx=0.01, rely=0.6, relwidth=0.98, relheight=0.3) # Dedica espaço para os para-raios
+
+        self.add_pr_button = Button(self.frame_info, text='Adicionar Para-Raio', command=self.add_pr_fields)
+        self.add_pr_button.place(relx=0.01, rely=0.92, relwidth=0.15, relheight=0.05)
+
+        self.remove_pr_button = Button(self.frame_info, text='Remover Último Para-Raio', command=self.remove_pr_fields)
+        self.remove_pr_button.place(relx=0.17, rely=0.92, relwidth=0.2, relheight=0.05)
+
+
+    def add_pr_fields(self, num_to_add=1):
+        for _ in range(num_to_add):
+            current_row = len(self.num_pr_entries) # Determina a linha atual
+            
+            # Raio do para-raio
+            Label(self.pr_frame, text=f'R_PR{current_row+1}:', bg='#BEBEBE').grid(row=current_row, column=0, padx=2, pady=2, sticky='w')
+            r_entry = Entry(self.pr_frame, width=8)
+            r_entry.grid(row=current_row, column=1, padx=2, pady=2, sticky='w')
+            self.r_pr_entries.append(r_entry)
+
+            # Posição 1
+            Label(self.pr_frame, text=f'Pos1 X/H:', bg='#BEBEBE').grid(row=current_row, column=2, padx=2, pady=2, sticky='w')
+            x_pos1_entry = Entry(self.pr_frame, width=8)
+            x_pos1_entry.grid(row=current_row, column=3, padx=2, pady=2, sticky='w')
+            h_pos1_entry = Entry(self.pr_frame, width=8)
+            h_pos1_entry.grid(row=current_row, column=4, padx=2, pady=2, sticky='w')
+
+            # Posição 2
+            Label(self.pr_frame, text=f'Pos2 X/H:', bg='#BEBEBE').grid(row=current_row, column=5, padx=2, pady=2, sticky='w')
+            x_pos2_entry = Entry(self.pr_frame, width=8)
+            x_pos2_entry.grid(row=current_row, column=6, padx=2, pady=2, sticky='w')
+            h_pos2_entry = Entry(self.pr_frame, width=8)
+            h_pos2_entry.grid(row=current_row, column=7, padx=2, pady=2, sticky='w')
+
+            # Posição 3
+            Label(self.pr_frame, text=f'Pos3 X/H:', bg='#BEBEBE').grid(row=current_row, column=8, padx=2, pady=2, sticky='w')
+            x_pos3_entry = Entry(self.pr_frame, width=8)
+            x_pos3_entry.grid(row=current_row, column=9, padx=2, pady=2, sticky='w')
+            h_pos3_entry = Entry(self.pr_frame, width=8)
+            h_pos3_entry.grid(row=current_row, column=10, padx=2, pady=2, sticky='w')
+            
+            # Armazena todas as entries dessa linha
+            self.num_pr_entries.append({
+                'r': r_entry,
+                'x_pos1': x_pos1_entry, 'h_pos1': h_pos1_entry,
+                'x_pos2': x_pos2_entry, 'h_pos2': h_pos2_entry,
+                'x_pos3': x_pos3_entry, 'h_pos3': h_pos3_entry
+            })
+        self.pr_frame.update_idletasks() # Atualiza o layout do frame
+
+    def remove_pr_fields(self):
+        if not self.num_pr_entries:
+            messagebox.showinfo("Aviso", "Não há cabos para-raios para remover.")
+            return
+
+        last_pr_set = self.num_pr_entries.pop()
+        
+        # Destruir os widgets associados a este conjunto de entradas
+        last_pr_set['r'].destroy()
+        last_pr_set['x_pos1'].destroy()
+        last_pr_set['h_pos1'].destroy()
+        last_pr_set['x_pos2'].destroy()
+        last_pr_set['h_pos2'].destroy()
+        last_pr_set['x_pos3'].destroy()
+        last_pr_set['h_pos3'].destroy()
+
+        # Também remover o Label do raio
+        for widget in self.pr_frame.winfo_children():
+            if isinstance(widget, Label) and f'R_PR{len(self.num_pr_entries)+1}:' in widget.cget("text"):
+                widget.destroy()
+                break
+        
+        # Remover os labels de Posição 1 X/H, Posição 2 X/H, Posição 3 X/H
+        # Isso é um pouco mais complexo pois os labels são genéricos.
+        # Precisamos de uma forma de identificar os labels da linha removida.
+        # Uma abordagem mais robusta seria associar os labels diretamente no dicionário
+        # self.num_pr_entries ou usar um layout que gerencie isso melhor (como Frame aninhados).
+        # Por simplicidade, vamos apenas limpar e redesenhar se muitos forem removidos.
+        # Uma solução mais simples para agora é apenas remover os entries.
+
+        # Alternativamente, para garantir que os labels sejam removidos corretamente:
+        # Percorrer o grid e destruir os widgets da última linha
+        for col in range(11): # 0 a 10 colunas no grid
+            widget = self.pr_frame.grid_slaves(row=len(self.num_pr_entries), column=col)
+            if widget:
+                widget[0].destroy() # Destrói o widget se ele existir
+        
+        # Redesenhar todos os widgets restantes para evitar lacunas (opcional, mas bom para limpeza)
+        self._redraw_pr_fields()
+        self.pr_frame.update_idletasks()
+
+    def _redraw_pr_fields(self):
+        # Limpa o frame de para-raios e redesenha tudo
+        for widget in self.pr_frame.winfo_children():
+            widget.destroy()
+        
+        # Zera as listas de entries e as reconstrói com os dados atuais
+        self.r_pr_entries = []
+        temp_pr_entries = list(self.num_pr_entries) # Faz uma cópia
+        self.num_pr_entries = [] # Zera a lista original
+
+        for i, pr_set in enumerate(temp_pr_entries):
+            # Recria os widgets e as associações
+            Label(self.pr_frame, text=f'R_PR{i+1}:', bg='#BEBEBE').grid(row=i, column=0, padx=2, pady=2, sticky='w')
+            r_entry = Entry(self.pr_frame, width=8)
+            r_entry.grid(row=i, column=1, padx=2, pady=2, sticky='w')
+            r_entry.insert(0, pr_set['r'].get()) # Preserva o valor
+            self.r_pr_entries.append(r_entry)
+
+            Label(self.pr_frame, text=f'Pos1 X/H:', bg='#BEBEBE').grid(row=i, column=2, padx=2, pady=2, sticky='w')
+            x_pos1_entry = Entry(self.pr_frame, width=8)
+            x_pos1_entry.grid(row=i, column=3, padx=2, pady=2, sticky='w')
+            x_pos1_entry.insert(0, pr_set['x_pos1'].get())
+            h_pos1_entry = Entry(self.pr_frame, width=8)
+            h_pos1_entry.grid(row=i, column=4, padx=2, pady=2, sticky='w')
+            h_pos1_entry.insert(0, pr_set['h_pos1'].get())
+
+            Label(self.pr_frame, text=f'Pos2 X/H:', bg='#BEBEBE').grid(row=i, column=5, padx=2, pady=2, sticky='w')
+            x_pos2_entry = Entry(self.pr_frame, width=8)
+            x_pos2_entry.grid(row=i, column=6, padx=2, pady=2, sticky='w')
+            x_pos2_entry.insert(0, pr_set['x_pos2'].get())
+            h_pos2_entry = Entry(self.pr_frame, width=8)
+            h_pos2_entry.grid(row=i, column=7, padx=2, pady=2, sticky='w')
+            h_pos2_entry.insert(0, pr_set['h_pos2'].get())
+
+            Label(self.pr_frame, text=f'Pos3 X/H:', bg='#BEBEBE').grid(row=i, column=8, padx=2, pady=2, sticky='w')
+            x_pos3_entry = Entry(self.pr_frame, width=8)
+            x_pos3_entry.grid(row=i, column=9, padx=2, pady=2, sticky='w')
+            x_pos3_entry.insert(0, pr_set['x_pos3'].get())
+            h_pos3_entry = Entry(self.pr_frame, width=8)
+            h_pos3_entry.grid(row=i, column=10, padx=2, pady=2, sticky='w')
+            h_pos3_entry.insert(0, pr_set['h_pos3'].get())
+
+            self.num_pr_entries.append({
+                'r': r_entry,
+                'x_pos1': x_pos1_entry, 'h_pos1': h_pos1_entry,
+                'x_pos2': x_pos2_entry, 'h_pos2': h_pos2_entry,
+                'x_pos3': x_pos3_entry, 'h_pos3': h_pos3_entry
+            })
+
+
+    def _setup_treeview(self):
+        self.lista_CAP = ttk.Treeview(self.frame_result, height=3,
+                                          columns=('col1','col2','col3'))
+        self.lista_CAP.heading("#0", text="Fase")
+        self.lista_CAP.heading("col1", text="Condutor A")
+        self.lista_CAP.heading("col2", text="Condutor B")
+        self.lista_CAP.heading("col3", text="Condutor C")
+
+        self.lista_CAP.column("#0", width=80, anchor=CENTER)
+        self.lista_CAP.column("col1", width=180, anchor=CENTER)
+        self.lista_CAP.column("col2", width=180, anchor=CENTER)
+        self.lista_CAP.column("col3", width=180, anchor=CENTER)
+
+        self.lista_CAP.place(relx=0.01, rely=0.1, relwidth=0.95, relheight=0.85)
+
+        self.scrollLista = Scrollbar(self.frame_result, orient='vertical')
+        self.lista_CAP.configure(yscrollcommand=self.scrollLista.set)
+        self.scrollLista.place(relx=0.96, rely=0.1, relwidth=0.02, relheight=0.85)
+
+    def _clear_inputs(self):
+        # Limpa os campos de entrada das fases e comprimentos
+        self.ra_entry.delete(0, END)
+        self.rb_entry.delete(0, END)
+        self.rc_entry.delete(0, END)
+        self.xa_pos1_entry.delete(0, END)
+        self.ha_pos1_entry.delete(0, END)
+        self.xb_pos2_entry.delete(0, END)
+        self.hb_pos2_entry.delete(0, END)
+        self.xc_pos3_entry.delete(0, END)
+        self.hc_pos3_entry.delete(0, END)
+        self.rho_entry.delete(0, END)
+        self.l1_entry.delete(0, END)
+        self.l2_entry.delete(0, END)
+        self.l3_entry.delete(0, END)
+        
+        # Limpa e remove todos os campos de para-raios
+        while self.num_pr_entries:
+            self.remove_pr_fields()
+        self.add_pr_fields(1) # Adiciona um campo de para-raio vazio novamente
+
+        # Limpa a Treeview e a preenche com NaN
+        self._insert_data_to_treeview(np.full((3, 3), np.nan, dtype=float))
+
+    def _get_input_values(self):
+        try:
+            # Raios dos condutores de fase
+            ra = float(self.ra_entry.get())
+            rb = float(self.rb_entry.get())
+            rc = float(self.rc_entry.get())
+
+            # Coordenadas das Posições Físicas das fases
+            xa_pos1 = float(self.xa_pos1_entry.get())
+            ha_pos1 = float(self.ha_pos1_entry.get())
+            xb_pos2 = float(self.xb_pos2_entry.get())
+            hb_pos2 = float(self.hb_pos2_entry.get())
+            xc_pos3 = float(self.xc_pos3_entry.get())
+            hc_pos3 = float(self.hc_pos3_entry.get())
+
+            # Resistividade do solo
+            rho = float(self.rho_entry.get())
+
+            # Comprimentos das seções
+            l1 = float(self.l1_entry.get())
+            l2 = float(self.l2_entry.get())
+            l3 = float(self.l3_entry.get())
+
+            # Coleta os dados dos cabos para-raios
+            r_pr_list = []
+            x_pr_pos1_list = []
+            h_pr_pos1_list = []
+            x_pr_pos2_list = []
+            h_pr_pos2_list = []
+            x_pr_pos3_list = []
+            h_pr_pos3_list = []
+
+            for pr_set in self.num_pr_entries:
+                r_pr_list.append(float(pr_set['r'].get()))
+                x_pr_pos1_list.append(float(pr_set['x_pos1'].get()))
+                h_pr_pos1_list.append(float(pr_set['h_pos1'].get()))
+                x_pr_pos2_list.append(float(pr_set['x_pos2'].get()))
+                h_pr_pos2_list.append(float(pr_set['h_pos2'].get()))
+                x_pr_pos3_list.append(float(pr_set['x_pos3'].get()))
+                h_pr_pos3_list.append(float(pr_set['h_pos3'].get()))
+
+            return {
+                'ra': ra, 'rb': rb, 'rc': rc,
+                'xa_pos1': xa_pos1, 'ha_pos1': ha_pos1,
+                'xb_pos2': xb_pos2, 'hb_pos2': hb_pos2,
+                'xc_pos3': xc_pos3, 'hc_pos3': hc_pos3,
+                'r_pr': r_pr_list,
+                'x_pr_pos1': x_pr_pos1_list, 'h_pr_pos1': h_pr_pos1_list,
+                'x_pr_pos2': x_pr_pos2_list, 'h_pr_pos2': h_pr_pos2_list,
+                'x_pr_pos3': x_pr_pos3_list, 'h_pr_pos3': h_pr_pos3_list,
+                'rho': rho,
+                'l1': l1, 'l2': l2, 'l3': l3
+            }
+        except ValueError as e:
+            messagebox.showerror("Erro de Entrada", f"Por favor, insira valores numéricos válidos em todos os campos. Detalhes: {e}")
+            return None
+        except Exception as e:
+            messagebox.showerror("Erro", f"Um erro inesperado ocorreu ao obter os valores: {e}")
+            return None
+
+    def _calculate_capacitance_ground_wire(self):
+        params = self._get_input_values()
+        if params is None:
+            return
+
+        try:
+            # Chama a função de cálculo da capacitância com cabo para-raio
+            # Certifique-se de que 'metodo_para_raio_tran' esteja acessível aqui (importada ou definida globalmente)
+            C_matrix_total = metodo_para_raio_tran(
+                ra=params['ra'], rb=params['rb'], rc=params['rc'],
+                xa_pos1=params['xa_pos1'], ha_pos1=params['ha_pos1'],
+                xb_pos2=params['xb_pos2'], hb_pos2=params['hb_pos2'],
+                xc_pos3=params['xc_pos3'], hc_pos3=params['hc_pos3'],
+                r_pr=params['r_pr'],
+                x_pr_pos1=params['x_pr_pos1'], h_pr_pos1=params['h_pr_pos1'],
+                x_pr_pos2=params['x_pr_pos2'], h_pr_pos2=params['h_pr_pos2'],
+                x_pr_pos3=params['x_pr_pos3'], h_pr_pos3=params['h_pr_pos3'],
+                rho=params['rho'],
+                l1=params['l1'], l2=params['l2'], l3=params['l3']
+            )
+
+            # Convertendo para nF (nanofarads) para melhor visualização
+            C_matrix_nF = C_matrix_total * 1e9 # Farads -> nanofarads
+
+            self._insert_data_to_treeview(C_matrix_nF)
+            messagebox.showinfo("Cálculo Concluído", "A matriz de capacitância (com para-raios) foi calculada e exibida na tabela.")
+        except NameError:
+            messagebox.showerror("Erro de Função", "A função 'metodo_para_raio_tran' não foi encontrada. Certifique-se de que está definida ou importada.")
+        except ValueError as e:
+            messagebox.showerror("Erro de Cálculo", f"Ocorreu um erro durante o cálculo: {e}")
+        except Exception as e:
+            messagebox.showerror("Erro Inesperado", f"Ocorreu um erro inesperado: {e}")
+
+    def _insert_data_to_treeview(self, C_matrix):
+        for i in self.lista_CAP.get_children():
+            self.lista_CAP.delete(i)
+
+        float_format = "{:.6e}" # Notação científica para valores pequenos
+        row_labels = ["A", "B", "C"]
+
+        for i, row_label in enumerate(row_labels):
+            row_values = []
+            for j in range(C_matrix.shape[1]):
+                value = C_matrix[i, j]
+                if np.isnan(value):
+                    formatted_value = "" # Exibe vazio se for NaN
+                else:
+                    formatted_value = float_format.format(value)
+                row_values.append(formatted_value)
+            self.lista_CAP.insert("", END, text=row_label, values=tuple(row_values))
+
+# --- CLASSE DA JANELA PARA CÁLCULO DE CAPACITÂNCIA COM FEIXE CONDUTOR ---
+class BundledCapacitanceCalculator:
+    def __init__(self, master_window):
+        self.master_window = master_window
+        self.calc_window = Toplevel(master_window)
+        self._setup_window()
+        self._setup_frames()
+        self._setup_widgets()
+        self._setup_treeview()
+
+        # Preenche a Treeview com campos vazios ao iniciar a janela
+        self._insert_data_to_treeview(np.full((3, 3), np.nan, dtype=float))
+
+    def _setup_window(self):
+        self.calc_window.title("Cálculo de Capacitância - Feixe Condutor")
+        self.calc_window.geometry("800x600") # Tamanho ajustado para os campos
+        self.calc_window.configure(background='#2F4F4F')
+        self.calc_window.resizable(False, False)
+        self.calc_window.protocol("WM_DELETE_WINDOW", self._on_closing)
+
+    def _on_closing(self):
+        self.calc_window.destroy()
+        self.master_window.deiconify() # Reexibe a janela principal
+
+    def _setup_frames(self):
+        self.frame_info = Frame(self.calc_window, bd=4, bg='#BEBEBE', highlightthickness=3)
+        self.frame_info.place(relx=0.02, rely=0.02, relwidth=0.96, relheight=0.55)
+
+        self.frame_result = Frame(self.calc_window, bd=4, bg='#BEBEBE', highlightthickness=3)
+        self.frame_result.place(relx=0.02, rely=0.6, relwidth=0.96, relheight=0.37)
+
+    def _setup_widgets(self):
+        # --- Botões ---
+        self.botao_return = Button(self.frame_info, text='Retornar', bd=4,
+                                   font=('Arial',10), command=self._on_closing)
+        self.botao_return.place(relx=.01, rely=.01, relwidth=0.15, relheight=0.08)
+
+        self.botao_limpar = Button(self.frame_info, text='Limpar', bd=4,
+                                   font=('Arial',10), command=self._clear_inputs)
+        self.botao_limpar.place(relx=.80, rely=.01, relwidth=0.15, relheight=0.08)
+
+        self.botao_calc = Button(self.frame_info, text='Calcular', bd=4,
+                                 font=('Arial',10), command=self._calculate_bundled_capacitance)
+        self.botao_calc.place(relx=.8, rely=.88, relwidth=0.15, relheight=0.08)
+
+        # --- Labels e Entradas de Raios dos Subcondutores ---
+        Label(self.frame_info, text='Raios dos Subcondutores (m)', bg='#BEBEBE', font=('Arial', 10, 'bold')).place(relx=0.01, rely=.12)
+
+        Label(self.frame_info, text='Ra_sub:', bg='#BEBEBE').place(relx=0.01, rely=.18)
+        self.ra_sub_entry = Entry(self.frame_info, width=10)
+        self.ra_sub_entry.place(relx=.08, rely=.18)
+
+        Label(self.frame_info, text='Rb_sub:', bg='#BEBEBE').place(relx=0.01, rely=.23)
+        self.rb_sub_entry = Entry(self.frame_info, width=10)
+        self.rb_sub_entry.place(relx=.08, rely=.23)
+
+        Label(self.frame_info, text='Rc_sub:', bg='#BEBEBE').place(relx=0.01, rely=.28)
+        self.rc_sub_entry = Entry(self.frame_info, width=10)
+        self.rc_sub_entry.place(relx=.08, rely=.28)
+
+        # --- Labels e Entradas de Número de Subcondutores ---
+        Label(self.frame_info, text='Nº Subcondutores (1,2,3,4)', bg='#BEBEBE', font=('Arial', 10, 'bold')).place(relx=0.25, rely=.12)
+
+        Label(self.frame_info, text='Na:', bg='#BEBEBE').place(relx=.25, rely=.18)
+        self.na_entry = Entry(self.frame_info, width=5)
+        self.na_entry.place(relx=.30, rely=.18)
+
+        Label(self.frame_info, text='Nb:', bg='#BEBEBE').place(relx=.25, rely=.23)
+        self.nb_entry = Entry(self.frame_info, width=5)
+        self.nb_entry.place(relx=.30, rely=.23)
+
+        Label(self.frame_info, text='Nc:', bg='#BEBEBE').place(relx=.25, rely=.28)
+        self.nc_entry = Entry(self.frame_info, width=5)
+        self.nc_entry.place(relx=.30, rely=.28)
+
+        # --- Labels e Entradas de Espaçamento entre Subcondutores ---
+        Label(self.frame_info, text='Espaçamento Subcondutores (m)', bg='#BEBEBE', font=('Arial', 10, 'bold')).place(relx=0.45, rely=.12)
+
+        Label(self.frame_info, text='Sa:', bg='#BEBEBE').place(relx=.45, rely=.18)
+        self.sa_entry = Entry(self.frame_info, width=10)
+        self.sa_entry.place(relx=.50, rely=.18)
+
+        Label(self.frame_info, text='Sb:', bg='#BEBEBE').place(relx=.45, rely=.23)
+        self.sb_entry = Entry(self.frame_info, width=10)
+        self.sb_entry.place(relx=.50, rely=.23)
+
+        Label(self.frame_info, text='Sc:', bg='#BEBEBE').place(relx=.45, rely=.28)
+        self.sc_entry = Entry(self.frame_info, width=10)
+        self.sc_entry.place(relx=.50, rely=.28)
+
+        # --- Labels e Entradas de Coordenadas X e H das Fases ---
+        Label(self.frame_info, text='Coordenadas Fases (X, H) [m]', bg='#BEBEBE', font=('Arial', 10, 'bold')).place(relx=0.7, rely=.12)
+
+        Label(self.frame_info, text='Fase A (X, H):', bg='#BEBEBE').place(relx=.7, rely=.18)
+        self.xa_entry = Entry(self.frame_info, width=8)
+        self.xa_entry.place(relx=.82, rely=.18)
+        self.ha_entry = Entry(self.frame_info, width=8)
+        self.ha_entry.place(relx=.88, rely=.18)
+
+        Label(self.frame_info, text='Fase B (X, H):', bg='#BEBEBE').place(relx=.7, rely=.23)
+        self.xb_entry = Entry(self.frame_info, width=8)
+        self.xb_entry.place(relx=.82, rely=.23)
+        self.hb_entry = Entry(self.frame_info, width=8)
+        self.hb_entry.place(relx=.88, rely=.23)
+
+        Label(self.frame_info, text='Fase C (X, H):', bg='#BEBEBE').place(relx=.7, rely=.28)
+        self.xc_entry = Entry(self.frame_info, width=8)
+        self.xc_entry.place(relx=.82, rely=.28)
+        self.hc_entry = Entry(self.frame_info, width=8)
+        self.hc_entry.place(relx=.88, rely=.28)
+
+        # --- Entrada de Resistividade do Solo ---
+        Label(self.frame_info, text='Resistividade Solo (rho) [Ohm.m]:', bg='#BEBEBE', font=('Arial', 10, 'bold')).place(relx=0.01, rely=.4)
+        self.rho_entry = Entry(self.frame_info, width=10)
+        self.rho_entry.place(relx=.25, rely=.4)
+
+        # --- Entrada de Comprimento Total da Linha ---
+        Label(self.frame_info, text='Comprimento Total da Linha (m):', bg='#BEBEBE', font=('Arial', 10, 'bold')).place(relx=0.01, rely=.5)
+        self.comprimento_total_entry = Entry(self.frame_info, width=10)
+        self.comprimento_total_entry.place(relx=.25, rely=.5)
+
+    def _setup_treeview(self):
+        self.lista_CAP = ttk.Treeview(self.frame_result, height=3,
+                                          columns=('col1','col2','col3'))
+        self.lista_CAP.heading("#0", text="Fase")
+        self.lista_CAP.heading("col1", text="Condutor A")
+        self.lista_CAP.heading("col2", text="Condutor B")
+        self.lista_CAP.heading("col3", text="Condutor C")
+
+        self.lista_CAP.column("#0", width=80, anchor=CENTER)
+        self.lista_CAP.column("col1", width=180, anchor=CENTER)
+        self.lista_CAP.column("col2", width=180, anchor=CENTER)
+        self.lista_CAP.column("col3", width=180, anchor=CENTER)
+
+        self.lista_CAP.place(relx=0.01, rely=0.1, relwidth=0.95, relheight=0.85)
+
+        self.scrollLista = Scrollbar(self.frame_result, orient='vertical')
+        self.lista_CAP.configure(yscrollcommand=self.scrollLista.set)
+        self.scrollLista.place(relx=0.96, rely=0.1, relwidth=0.02, relheight=0.85)
+
+    def _clear_inputs(self):
+        # Limpa todos os campos de entrada
+        self.ra_sub_entry.delete(0, END)
+        self.rb_sub_entry.delete(0, END)
+        self.rc_sub_entry.delete(0, END)
+        self.na_entry.delete(0, END)
+        self.nb_entry.delete(0, END)
+        self.nc_entry.delete(0, END)
+        self.sa_entry.delete(0, END)
+        self.sb_entry.delete(0, END)
+        self.sc_entry.delete(0, END)
+        self.xa_entry.delete(0, END)
+        self.ha_entry.delete(0, END)
+        self.xb_entry.delete(0, END)
+        self.hb_entry.delete(0, END)
+        self.xc_entry.delete(0, END)
+        self.hc_entry.delete(0, END)
+        self.rho_entry.delete(0, END)
+        self.comprimento_total_entry.delete(0, END)
+
+        # Limpa a Treeview e a preenche com NaN
+        self._insert_data_to_treeview(np.full((3, 3), np.nan, dtype=float))
+
+    def _get_input_values(self):
+        try:
+            # Raios dos subcondutores
+            ra_sub = float(self.ra_sub_entry.get())
+            rb_sub = float(self.rb_sub_entry.get())
+            rc_sub = float(self.rc_sub_entry.get())
+
+            # Número de subcondutores
+            na = int(self.na_entry.get())
+            nb = int(self.nb_entry.get())
+            nc = int(self.nc_entry.get())
+
+            # Espaçamento entre subcondutores
+            sa = float(self.sa_entry.get())
+            sb = float(self.sb_entry.get())
+            sc = float(self.sc_entry.get())
+
+            # Coordenadas X e H das Fases
+            xa = float(self.xa_entry.get())
+            ha = float(self.ha_entry.get())
+            xb = float(self.xb_entry.get())
+            hb = float(self.hb_entry.get())
+            xc = float(self.xc_entry.get())
+            hc = float(self.hc_entry.get())
+
+            # Resistividade do solo
+            rho = float(self.rho_entry.get())
+
+            # Comprimento total da linha
+            comprimento_total = float(self.comprimento_total_entry.get())
+
+            return {
+                'ra_sub': ra_sub, 'rb_sub': rb_sub, 'rc_sub': rc_sub,
+                'na': na, 'nb': nb, 'nc': nc,
+                'sa': sa, 'sb': sb, 'sc': sc,
+                'xa': xa, 'ha': ha, 'xb': xb, 'hb': hb, 'xc': xc, 'hc': hc,
+                'rho': rho, 'comprimento_total': comprimento_total
+            }
+        except ValueError as e:
+            messagebox.showerror("Erro de Entrada", f"Por favor, insira valores numéricos válidos. Verifique todos os campos. Detalhes: {e}")
+            return None
+        except Exception as e:
+            messagebox.showerror("Erro", f"Um erro inesperado ocorreu ao obter os valores: {e}")
+            return None
+
+    def _calculate_bundled_capacitance(self):
+        params = self._get_input_values()
+        if params is None:
+            return
+
+        try:
+            # Chama a função de cálculo da capacitância com feixe condutor
+            # Certifique-se de que 'metodo_feixe_condutor_tran' esteja acessível aqui (importada ou definida globalmente)
+            C_matrix = metodo_feixe_condutor_tran(
+                ra_sub=params['ra_sub'], rb_sub=params['rb_sub'], rc_sub=params['rc_sub'],
+                na=params['na'], nb=params['nb'], nc=params['nc'],
+                sa=params['sa'], sb=params['sb'], sc=params['sc'],
+                xa=params['xa'], ha=params['ha'], xb=params['xb'], hb=params['hb'], xc=params['xc'], hc=params['hc'],
+                rho=params['rho'], comprimento_total=params['comprimento_total']
+            )
+
+            # Convertendo para nF (nanofarads) para melhor visualização
+            C_matrix_nF = C_matrix * 1e9 # Farads -> nanofarads
+
+            self._insert_data_to_treeview(C_matrix_nF)
+            messagebox.showinfo("Cálculo Concluído", "A matriz de capacitância (feixe condutor) foi calculada e exibida na tabela.")
+        except NameError:
+            messagebox.showerror("Erro de Função", "A função 'metodo_feixe_condutor_tran' não foi encontrada. Certifique-se de que está definida ou importada.")
+        except ValueError as e:
+            messagebox.showerror("Erro de Cálculo", f"Ocorreu um erro durante o cálculo: {e}")
+        except Exception as e:
+            messagebox.showerror("Erro Inesperado", f"Ocorreu um erro inesperado: {e}")
+
+    def _insert_data_to_treeview(self, C_matrix):
+        for i in self.lista_CAP.get_children():
+            self.lista_CAP.delete(i)
+
+        float_format = "{:.6e}" # Formato para exibir números reais em notação científica para valores pequenos
+        row_labels = ["A", "B", "C"]
+
+        for i, row_label in enumerate(row_labels):
+            row_values = []
+            for j in range(C_matrix.shape[1]):
+                value = C_matrix[i, j]
+                if np.isnan(value):
+                    formatted_value = "" # Exibe vazio se for NaN
+                else:
+                    formatted_value = float_format.format(value)
+                row_values.append(formatted_value)
+            self.lista_CAP.insert("", END, text=row_label, values=tuple(row_values))
+
 # --- Classe Principal da Aplicação (Tela de Seleção de Métodos) ---
 class AppMain:
     def __init__(self, master):
@@ -1994,12 +2648,12 @@ class AppMain:
         elif selected_method == "Transversal transposição": # Nova condição para o método de Carson
             self.root.withdraw() # Esconde a janela principal
             TransposedCapacitanceCalculator(self.root) # Instancia a nova janela de Carson
-        #elif selected_method == "Transversal para-raio": # Nova condição para o método de Carson
-        #    self.root.withdraw() # Esconde a janela principal
-        #    SymmetricalComponentAnalyzer(self.root) # Instancia a nova janela de Carson
-        #elif selected_method == "Transversal feixe de condutor": # Nova condição para o método de Carson
-        #    self.root.withdraw() # Esconde a janela principal
-        #    SymmetricalComponentAnalyzer(self.root) # Instancia a nova janela de Carson
+        elif selected_method == "Transversal para-raio": # Nova condição para o método de Carson
+            self.root.withdraw() # Esconde a janela principal
+            CapacitanceGroundWireCalculator(self.root) # Instancia a nova janela de Carson
+        elif selected_method == "Transversal feixe de condutor": # Nova condição para o método de Carson
+            self.root.withdraw() # Esconde a janela principal
+            BundledCapacitanceCalculator(self.root) # Instancia a nova janela de Carson
         #elif selected_method == "Transversal capacitância de sequências": # Nova condição para o método de Carson
         #    self.root.withdraw() # Esconde a janela principal
         #    SymmetricalComponentAnalyzer(self.root) # Instancia a nova janela de Carson

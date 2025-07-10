@@ -117,36 +117,3 @@ def metodo_imagem_long(ra, rb, rc, xa, ha, xb, hb, xc, hc, R=None, Rmg_val=None)
     ])
 
     return Z # A função retorna a matriz de impedância calculada
-
-# --- Exemplo de Uso ---
-# Para um condutor sólido, Rmg = R * e^(-1/4).
-# Exemplo 1: Fornecendo RMG diretamente
-print("--- Cálculo com RMG fornecido ---")
-Z_calc_1 = metodo_imagem_long(
-    ra=0.1, rb=0.1, rc=0.1,        # Resistências
-    xa=0, ha=20,                   # Condutor A: x=0m, h=20m
-    xb=6, hb=30,                   # Condutor B: x=6m, h=30m
-    xc=12, hc=20,                  # Condutor C: x=12m, h=20m
-    Rmg_val=0.15                   # RMG fornecido
-)
-print(f"Matriz de Impedância (Ohm/unidade):\n{Z_calc_1}\n")
-
-# Exemplo 2: Fornecendo o Raio R e calculando o RMG
-print("--- Cálculo com Raio (R) fornecido ---")
-# Se o RMG for 0.15, então R seria aproximadamente 0.15 / math.exp(-1/4) = 0.1926
-R_exemplo = 0.1926 # Exemplo de raio físico
-Z_calc_2 = metodo_imagem_long(
-    ra=0.1, rb=0.1, rc=0.1,
-    xa=0, ha=20,
-    xb=6, hb=30,
-    xc=12, hc=20,
-    R=R_exemplo                    # Raio físico fornecido
-)
-print(f"Matriz de Impedância (Ohm/unidade):\n{Z_calc_2}\n")
-
-# Exemplo 3: Testando a validação de erro (descomente para testar)
-# print("--- Teste de erro: RMG ou R ausentes ---")
-# try:
-#     metodo_imagem_long(0.1, 0.1, 0.1, 0, 20, 6, 30, 12, 20)
-# except ValueError as e:
-#     print(e)
