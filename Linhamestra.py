@@ -23,6 +23,15 @@ from longitudinais.feixes_de_condutores import calcular_rmg_feixe
 from longitudinais.componentes_simetricas_sintese import comp_sim_sintese
 from longitudinais.componentes_simetricas_analise import comp_sim_analise
 
+## Transversais
+# Importa funções específicas para cálculos de capacitância transversal,
+# agrupadas por diferentes métodos e considerações.
+from Transversais.imagem import metodo_imagem_tran
+from Transversais.para_raio import metodo_para_raio_tran
+from Transversais.transposicao import metodo_transposicao_tran
+from Transversais.feixe_condutor import metodo_feixe_condutor_tran
+from Transversais.capacitancia_de_sequencia import metodo_capacitancia_sequencia_tran
+
 # Classes de Janelas da Interface Gráfica
 
 # --- Classe para a Tela de Cálculo do Método das Imagens Longitudinais (Mantida para o método "Longitudinal Imagem") ---
@@ -1495,6 +1504,422 @@ class SymmetricalComponentAnalyzer:
             # Insere a linha na Treeview
             self.lista_componentes.insert("", END, text=row_label, values=(formatted_rect, formatted_polar))
 
+# --- Classe da janela para cálculo de capacitância imagem ---
+class CapacitanceImageCalculator:
+    def __init__(self, master_window):
+        self.master_window = master_window
+        self.calc_window = Toplevel(master_window) # Cria uma nova janela Toplevel
+        self._setup_window()
+        self._setup_frames()
+        self._setup_widgets()
+        self._setup_treeview()
+
+        # Preenche a Treeview com campos vazios ao iniciar a janela
+        # A matriz de capacitância é real, então usamos float.
+        self._insert_data_to_treeview(np.full((3, 3), np.nan, dtype=float))
+
+    def _setup_window(self):
+        self.calc_window.title("Cálculo de Capacitância - Método da Imagem") # Título ajustado
+        self.calc_window.geometry("700x500")
+        self.calc_window.configure(background='#2F4F4F')
+        self.calc_window.resizable(False, False)
+        self.calc_window.protocol("WM_DELETE_WINDOW", self._on_closing)
+
+    def _on_closing(self):
+        self.calc_window.destroy()
+        self.master_window.deiconify() # Reexibe a janela principal
+
+    def _setup_frames(self):
+        self.frame_info = Frame(self.calc_window, bd=4, bg='#BEBEBE', highlightthickness=3)
+        self.frame_info.place(relx=0.02, rely=0.02, relwidth=0.96, relheight=0.45)
+
+        self.frame_result = Frame(self.calc_window, bd=4, bg='#BEBEBE', highlightthickness=3)
+        self.frame_result.place(relx=0.02, rely=0.5, relwidth=0.96, relheight=0.45)
+
+    def _setup_widgets(self):
+        # --- Botões ---
+        self.botao_return = Button(self.frame_info, text='Retornar', bd=4,
+                                   font=('Arial',10), command=self._on_closing)
+        self.botao_return.place(relx=.01, rely=.01, relwidth=0.15, relheight=0.1)
+
+        self.botao_limpar = Button(self.frame_info, text='Limpar', bd=4,
+                                   font=('Arial',10), command=self._clear_inputs)
+        self.botao_limpar.place(relx=.80, rely=.01, relwidth=0.15, relheight=0.1)
+
+        self.botao_calc = Button(self.frame_info, text='Calcular', bd=4,
+                                 font=('Arial',10), command=self._calculate_capacitance) # Ação de cálculo de capacitância
+        self.botao_calc.place(relx=.8, rely=.85, relwidth=0.15, relheight=0.1)
+
+        # --- Labels e Entradas de Coordenadas e Raio ---
+        Label(self.frame_info, text='Coordenadas dos Condutores (m)', bg='#BEBEBE').place(relx=.01, rely=.2)
+
+        # Coordenadas X
+        Label(self.frame_info, text='X_A:', bg='#BEBEBE').place(relx=.01, rely=.32)
+        self.xa_entry = Entry(self.frame_info)
+        self.xa_entry.place(relx=.1, rely=.32, relwidth=0.08)
+
+        Label(self.frame_info, text='X_B:', bg='#BEBEBE').place(relx=.01, rely=.44)
+        self.xb_entry = Entry(self.frame_info)
+        self.xb_entry.place(relx=.1, rely=.44, relwidth=0.08)
+
+        Label(self.frame_info, text='X_C:', bg='#BEBEBE').place(relx=.01, rely=.56)
+        self.xc_entry = Entry(self.frame_info)
+        self.xc_entry.place(relx=.1, rely=.56, relwidth=0.08)
+
+        # Alturas H
+        Label(self.frame_info, text='H_A:', bg='#BEBEBE').place(relx=.25, rely=.32)
+        self.ha_entry = Entry(self.frame_info)
+        self.ha_entry.place(relx=.34, rely=.32, relwidth=0.08)
+
+        Label(self.frame_info, text='H_B:', bg='#BEBEBE').place(relx=.25, rely=.44)
+        self.hb_entry = Entry(self.frame_info)
+        self.hb_entry.place(relx=.34, rely=.44, relwidth=0.08)
+
+        Label(self.frame_info, text='H_C:', bg='#BEBEBE').place(relx=.25, rely=.56)
+        self.hc_entry = Entry(self.frame_info)
+        self.hc_entry.place(relx=.34, rely=.56, relwidth=0.08)
+
+        # Raio
+        Label(self.frame_info, text='Raio Condutor (R) [m]:', bg='#BEBEBE').place(relx=0.01, rely=.68)
+        self.r_entry = Entry(self.frame_info)
+        self.r_entry.place(relx=.2, rely=.68, relwidth=0.08)
+
+        # As entradas de Ra, Rb, Rc e RMG foram removidas por não serem relevantes para capacitância.
+
+    def _setup_treeview(self):
+        # A Treeview será usada para exibir a matriz de capacitância (similar à de impedância)
+        self.lista_CAP = ttk.Treeview(self.frame_result, height=3,
+                                          columns=('col1','col2','col3'))
+        self.lista_CAP.heading("#0", text="Fase")
+        self.lista_CAP.heading("col1", text="Condutor A")
+        self.lista_CAP.heading("col2", text="Condutor B")
+        self.lista_CAP.heading("col3", text="Condutor C")
+
+        self.lista_CAP.column("#0", width=80, anchor=CENTER)
+        self.lista_CAP.column("col1", width=180, anchor=CENTER)
+        self.lista_CAP.column("col2", width=180, anchor=CENTER)
+        self.lista_CAP.column("col3", width=180, anchor=CENTER)
+
+        self.lista_CAP.place(relx=0.01, rely=0.1, relwidth=0.95, relheight=0.85)
+
+        self.scrollLista = Scrollbar(self.frame_result, orient='vertical')
+        self.lista_CAP.configure(yscrollcommand=self.scrollLista.set)
+        self.scrollLista.place(relx=0.96, rely=0.1, relwidth=0.02, relheight=0.85)
+
+    def _clear_inputs(self):
+        # Limpa apenas os campos de entrada relevantes para capacitância
+        self.xa_entry.delete(0, END)
+        self.xb_entry.delete(0, END)
+        self.xc_entry.delete(0, END)
+        self.ha_entry.delete(0, END)
+        self.hb_entry.delete(0, END)
+        self.hc_entry.delete(0, END)
+        self.r_entry.delete(0, END)
+        
+        # Limpa a Treeview e a preenche com NaN
+        self._insert_data_to_treeview(np.full((3, 3), np.nan, dtype=float))
+
+    def _get_input_values(self):
+        try:
+            # Obtém e valida as coordenadas e o raio
+            xa = float(self.xa_entry.get())
+            xb = float(self.xb_entry.get())
+            xc = float(self.xc_entry.get())
+
+            ha = float(self.ha_entry.get())
+            hb = float(self.hb_entry.get())
+            hc = float(self.hc_entry.get())
+
+            R = float(self.r_entry.get())
+
+            return {
+                'xa': xa, 'xb': xb, 'xc': xc,
+                'ha': ha, 'hb': hb, 'hc': hc,
+                'R': R
+            }
+        except ValueError as e:
+            messagebox.showerror("Erro de Entrada", f"Por favor, insira valores numéricos válidos. Detalhes: {e}")
+            return None
+
+    def _calculate_capacitance(self):
+        params = self._get_input_values()
+        if params is None:
+            return
+
+        try:
+            # Chama a função de cálculo da capacitância
+            C_matrix_F_per_m = metodo_imagem_tran(
+                xa=params['xa'], xb=params['xb'], xc=params['xc'],
+                ha=params['ha'], hb=params['hb'], hc=params['hc'],
+                R=params['R']
+            )
+
+            # Convertendo para nF/km (nanofarads por quilômetro) para melhor visualização
+            C_matrix_nF_per_km = C_matrix_F_per_m * 1e9 * 1e3 # 1e9 para nF, 1e3 para km
+
+            self._insert_data_to_treeview(C_matrix_nF_per_km)
+            messagebox.showinfo("Cálculo Concluído", "A matriz de capacitância foi calculada e exibida na tabela.")
+        except ValueError as e:
+            messagebox.showerror("Erro de Cálculo", f"Ocorreu um erro durante o cálculo: {e}")
+        except Exception as e:
+            messagebox.showerror("Erro Inesperado", f"Ocorreu um erro inesperado: {e}")
+
+    def _insert_data_to_treeview(self, C_matrix):
+        for i in self.lista_CAP.get_children():
+            self.lista_CAP.delete(i)
+
+        # A matriz de capacitância é real, não complexa.
+        float_format = "{:.6f}" # Formato para exibir números reais com 6 casas decimais
+        row_labels = ["A", "B", "C"]
+
+        for i, row_label in enumerate(row_labels):
+            row_values = []
+            for j in range(C_matrix.shape[1]):
+                value = C_matrix[i, j]
+                if np.isnan(value):
+                    formatted_value = "" # Exibe vazio se for NaN
+                else:
+                    formatted_value = float_format.format(value)
+                row_values.append(formatted_value)
+            self.lista_CAP.insert("", END, text=row_label, values=tuple(row_values))
+
+# --- CLASSE DA JANELA PARA CÁLCULO DE CAPACITÂNCIA TRANSPOSTA ---
+class TransposedCapacitanceCalculator:
+    def __init__(self, master_window):
+        self.master_window = master_window
+        self.calc_window = Toplevel(master_window) # Cria uma nova janela Toplevel
+        self._setup_window()
+        self._setup_frames()
+        self._setup_widgets()
+        self._setup_treeview()
+
+        # Preenche a Treeview com campos vazios ao iniciar a janela
+        self._insert_data_to_treeview(np.full((3, 3), np.nan, dtype=float))
+
+    def _setup_window(self):
+        self.calc_window.title("Cálculo de Capacitância - Transposição")
+        self.calc_window.geometry("850x650") # Aumenta o tamanho para acomodar mais campos
+        self.calc_window.configure(background='#2F4F4F')
+        self.calc_window.resizable(False, False)
+        self.calc_window.protocol("WM_DELETE_WINDOW", self._on_closing)
+
+    def _on_closing(self):
+        self.calc_window.destroy()
+        self.master_window.deiconify() # Reexibe a janela principal
+
+    def _setup_frames(self):
+        self.frame_info = Frame(self.calc_window, bd=4, bg='#BEBEBE', highlightthickness=3)
+        self.frame_info.place(relx=0.02, rely=0.02, relwidth=0.96, relheight=0.55) # Aumenta a altura para os campos de entrada
+
+        self.frame_result = Frame(self.calc_window, bd=4, bg='#BEBEBE', highlightthickness=3)
+        self.frame_result.place(relx=0.02, rely=0.6, relwidth=0.96, relheight=0.37) # Ajusta a posição e altura
+
+    def _setup_widgets(self):
+        # --- Botões ---
+        self.botao_return = Button(self.frame_info, text='Retornar', bd=4,
+                                   font=('Arial',10), command=self._on_closing)
+        self.botao_return.place(relx=.01, rely=.01, relwidth=0.15, relheight=0.08)
+
+        self.botao_limpar = Button(self.frame_info, text='Limpar', bd=4,
+                                   font=('Arial',10), command=self._clear_inputs)
+        self.botao_limpar.place(relx=.80, rely=.01, relwidth=0.15, relheight=0.08)
+
+        self.botao_calc = Button(self.frame_info, text='Calcular', bd=4,
+                                 font=('Arial',10), command=self._calculate_transposed_capacitance)
+        self.botao_calc.place(relx=.8, rely=.9, relwidth=0.15, relheight=0.08) # Posição ajustada
+
+        # --- Labels e Entradas de Raios dos Condutores ---
+        Label(self.frame_info, text='Raios dos Condutores (m)', bg='#BEBEBE').place(relx=0.01, rely=.12)
+
+        Label(self.frame_info, text='Ra:', bg='#BEBEBE').place(relx=0.01, rely=.2)
+        self.ra_entry = Entry(self.frame_info)
+        self.ra_entry.place(relx=.08, rely=.2, relwidth=0.08)
+
+        Label(self.frame_info, text='Rb:', bg='#BEBEBE').place(relx=0.01, rely=.28)
+        self.rb_entry = Entry(self.frame_info)
+        self.rb_entry.place(relx=.08, rely=.28, relwidth=0.08)
+
+        Label(self.frame_info, text='Rc:', bg='#BEBEBE').place(relx=0.01, rely=.36)
+        self.rc_entry = Entry(self.frame_info)
+        self.rc_entry.place(relx=.08, rely=.36, relwidth=0.08)
+
+        # --- Labels e Entradas de Coordenadas para Posição 1 ---
+        Label(self.frame_info, text='Posição Física 1 (m)', bg='#BEBEBE').place(relx=.2, rely=.12)
+
+        Label(self.frame_info, text='X_Pos1:', bg='#BEBEBE').place(relx=.2, rely=.2)
+        self.xa_pos1_entry = Entry(self.frame_info)
+        self.xa_pos1_entry.place(relx=.28, rely=.2, relwidth=0.08)
+
+        Label(self.frame_info, text='H_Pos1:', bg='#BEBEBE').place(relx=.2, rely=.28)
+        self.ha_pos1_entry = Entry(self.frame_info)
+        self.ha_pos1_entry.place(relx=.28, rely=.28, relwidth=0.08)
+
+        # --- Labels e Entradas de Coordenadas para Posição 2 ---
+        Label(self.frame_info, text='Posição Física 2 (m)', bg='#BEBEBE').place(relx=.4, rely=.12)
+
+        Label(self.frame_info, text='X_Pos2:', bg='#BEBEBE').place(relx=.4, rely=.2)
+        self.xb_pos2_entry = Entry(self.frame_info)
+        self.xb_pos2_entry.place(relx=.48, rely=.2, relwidth=0.08)
+
+        Label(self.frame_info, text='H_Pos2:', bg='#BEBEBE').place(relx=.4, rely=.28)
+        self.hb_pos2_entry = Entry(self.frame_info)
+        self.hb_pos2_entry.place(relx=.48, rely=.28, relwidth=0.08)
+
+        # --- Labels e Entradas de Coordenadas para Posição 3 ---
+        Label(self.frame_info, text='Posição Física 3 (m)', bg='#BEBEBE').place(relx=.6, rely=.12)
+
+        Label(self.frame_info, text='X_Pos3:', bg='#BEBEBE').place(relx=.6, rely=.2)
+        self.xc_pos3_entry = Entry(self.frame_info)
+        self.xc_pos3_entry.place(relx=.68, rely=.2, relwidth=0.08)
+
+        Label(self.frame_info, text='H_Pos3:', bg='#BEBEBE').place(relx=.6, rely=.28)
+        self.hc_pos3_entry = Entry(self.frame_info)
+        self.hc_pos3_entry.place(relx=.68, rely=.28, relwidth=0.08)
+
+        # --- Entrada de Resistividade do Solo ---
+        Label(self.frame_info, text='Resistividade Solo (rho) [Ohm.m]:', bg='#BEBEBE').place(relx=0.01, rely=.45)
+        self.rho_entry = Entry(self.frame_info)
+        self.rho_entry.place(relx=.25, rely=.45, relwidth=0.08)
+
+        # --- Entradas de Comprimentos das Seções ---
+        Label(self.frame_info, text='Comprimentos das Seções (m)', bg='#BEBEBE').place(relx=0.01, rely=.55)
+
+        Label(self.frame_info, text='L1 (m):', bg='#BEBEBE').place(relx=.01, rely=.63)
+        self.l1_entry = Entry(self.frame_info)
+        self.l1_entry.place(relx=.08, rely=.63, relwidth=0.08)
+
+        Label(self.frame_info, text='L2 (m):', bg='#BEBEBE').place(relx=.01, rely=.71)
+        self.l2_entry = Entry(self.frame_info)
+        self.l2_entry.place(relx=.08, rely=.71, relwidth=0.08)
+
+        Label(self.frame_info, text='L3 (m):', bg='#BEBEBE').place(relx=.01, rely=.79)
+        self.l3_entry = Entry(self.frame_info)
+        self.l3_entry.place(relx=.08, rely=.79, relwidth=0.08)
+
+    def _setup_treeview(self):
+        self.lista_CAP = ttk.Treeview(self.frame_result, height=3,
+                                          columns=('col1','col2','col3'))
+        self.lista_CAP.heading("#0", text="Fase")
+        self.lista_CAP.heading("col1", text="Condutor A")
+        self.lista_CAP.heading("col2", text="Condutor B")
+        self.lista_CAP.heading("col3", text="Condutor C")
+
+        self.lista_CAP.column("#0", width=80, anchor=CENTER)
+        self.lista_CAP.column("col1", width=180, anchor=CENTER)
+        self.lista_CAP.column("col2", width=180, anchor=CENTER)
+        self.lista_CAP.column("col3", width=180, anchor=CENTER)
+
+        self.lista_CAP.place(relx=0.01, rely=0.1, relwidth=0.95, relheight=0.85)
+
+        self.scrollLista = Scrollbar(self.frame_result, orient='vertical')
+        self.lista_CAP.configure(yscrollcommand=self.scrollLista.set)
+        self.scrollLista.place(relx=0.96, rely=0.1, relwidth=0.02, relheight=0.85)
+
+    def _clear_inputs(self):
+        # Limpa todos os campos de entrada
+        self.ra_entry.delete(0, END)
+        self.rb_entry.delete(0, END)
+        self.rc_entry.delete(0, END)
+        self.xa_pos1_entry.delete(0, END)
+        self.ha_pos1_entry.delete(0, END)
+        self.xb_pos2_entry.delete(0, END)
+        self.hb_pos2_entry.delete(0, END)
+        self.xc_pos3_entry.delete(0, END)
+        self.hc_pos3_entry.delete(0, END)
+        self.rho_entry.delete(0, END)
+        self.l1_entry.delete(0, END)
+        self.l2_entry.delete(0, END)
+        self.l3_entry.delete(0, END)
+
+        # Limpa a Treeview e a preenche com NaN
+        self._insert_data_to_treeview(np.full((3, 3), np.nan, dtype=float))
+
+    def _get_input_values(self):
+        try:
+            # Raios dos condutores
+            ra = float(self.ra_entry.get())
+            rb = float(self.rb_entry.get())
+            rc = float(self.rc_entry.get())
+
+            # Coordenadas das Posições Físicas
+            xa_pos1 = float(self.xa_pos1_entry.get())
+            ha_pos1 = float(self.ha_pos1_entry.get())
+            xb_pos2 = float(self.xb_pos2_entry.get())
+            hb_pos2 = float(self.hb_pos2_entry.get())
+            xc_pos3 = float(self.xc_pos3_entry.get())
+            hc_pos3 = float(self.hc_pos3_entry.get())
+
+            # Resistividade do solo
+            rho = float(self.rho_entry.get())
+
+            # Comprimentos das seções
+            l1 = float(self.l1_entry.get())
+            l2 = float(self.l2_entry.get())
+            l3 = float(self.l3_entry.get())
+
+            return {
+                'ra': ra, 'rb': rb, 'rc': rc,
+                'xa_pos1': xa_pos1, 'ha_pos1': ha_pos1,
+                'xb_pos2': xb_pos2, 'hb_pos2': hb_pos2,
+                'xc_pos3': xc_pos3, 'hc_pos3': hc_pos3,
+                'rho': rho,
+                'l1': l1, 'l2': l2, 'l3': l3
+            }
+        except ValueError as e:
+            messagebox.showerror("Erro de Entrada", f"Por favor, insira valores numéricos válidos. Detalhes: {e}")
+            return None
+        except Exception as e:
+            messagebox.showerror("Erro", f"Um erro inesperado ocorreu ao obter os valores: {e}")
+            return None
+
+
+    def _calculate_transposed_capacitance(self):
+        params = self._get_input_values()
+        if params is None:
+            return
+
+        try:
+            # Chama a função de cálculo da capacitância transposta
+            # Certifique-se de que 'metodo_transposicao_tran' esteja acessível aqui (importada ou definida globalmente)
+            C_matrix_total = metodo_transposicao_tran(
+                ra=params['ra'], rb=params['rb'], rc=params['rc'],
+                xa_pos1=params['xa_pos1'], ha_pos1=params['ha_pos1'],
+                xb_pos2=params['xb_pos2'], hb_pos2=params['hb_pos2'],
+                xc_pos3=params['xc_pos3'], hc_pos3=params['hc_pos3'],
+                rho=params['rho'],
+                l1=params['l1'], l2=params['l2'], l3=params['l3']
+            )
+
+            # Convertendo para nF (nanofarads) para melhor visualização
+            C_matrix_nF = C_matrix_total * 1e9 # Farads -> nanofarads
+
+            self._insert_data_to_treeview(C_matrix_nF)
+            messagebox.showinfo("Cálculo Concluído", "A matriz de capacitância transposta foi calculada e exibida na tabela.")
+        except NameError:
+            messagebox.showerror("Erro de Função", "A função 'metodo_transposicao_tran' não foi encontrada. Certifique-se de que está definida ou importada.")
+        except ValueError as e:
+            messagebox.showerror("Erro de Cálculo", f"Ocorreu um erro durante o cálculo: {e}")
+        except Exception as e:
+            messagebox.showerror("Erro Inesperado", f"Ocorreu um erro inesperado: {e}")
+
+    def _insert_data_to_treeview(self, C_matrix):
+        for i in self.lista_CAP.get_children():
+            self.lista_CAP.delete(i)
+
+        float_format = "{:.6e}" # Formato para exibir números reais em notação científica para valores pequenos
+        row_labels = ["A", "B", "C"]
+
+        for i, row_label in enumerate(row_labels):
+            row_values = []
+            for j in range(C_matrix.shape[1]):
+                value = C_matrix[i, j]
+                if np.isnan(value):
+                    formatted_value = "" # Exibe vazio se for NaN
+                else:
+                    formatted_value = float_format.format(value)
+                row_values.append(formatted_value)
+            self.lista_CAP.insert("", END, text=row_label, values=tuple(row_values))
+
 # --- Classe Principal da Aplicação (Tela de Seleção de Métodos) ---
 class AppMain:
     def __init__(self, master):
@@ -1563,6 +1988,21 @@ class AppMain:
         elif selected_method == "Longitudinal Análise de Componentes Simétricas": # Nova condição para o método de Carson
             self.root.withdraw() # Esconde a janela principal
             SymmetricalComponentAnalyzer(self.root) # Instancia a nova janela de Carson
+        elif selected_method == "Transversal imagem": # Nova condição para o método de Carson
+            self.root.withdraw() # Esconde a janela principal
+            CapacitanceImageCalculator(self.root) # Instancia a nova janela de Carson
+        elif selected_method == "Transversal transposição": # Nova condição para o método de Carson
+            self.root.withdraw() # Esconde a janela principal
+            TransposedCapacitanceCalculator(self.root) # Instancia a nova janela de Carson
+        #elif selected_method == "Transversal para-raio": # Nova condição para o método de Carson
+        #    self.root.withdraw() # Esconde a janela principal
+        #    SymmetricalComponentAnalyzer(self.root) # Instancia a nova janela de Carson
+        #elif selected_method == "Transversal feixe de condutor": # Nova condição para o método de Carson
+        #    self.root.withdraw() # Esconde a janela principal
+        #    SymmetricalComponentAnalyzer(self.root) # Instancia a nova janela de Carson
+        #elif selected_method == "Transversal capacitância de sequências": # Nova condição para o método de Carson
+        #    self.root.withdraw() # Esconde a janela principal
+        #    SymmetricalComponentAnalyzer(self.root) # Instancia a nova janela de Carson
         else:
             messagebox.showinfo("Método Não Implementado", f"O método '{selected_method}' ainda não foi implementado. Por favor, selecione 'Longitudinal Imagem' ou 'Longitudinal Carson (Correção)'.")
 
