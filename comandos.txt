@@ -1,2 +1,6 @@
 Para gerar um executavel (lembrar de gerar um executavel no windows e no linux):
 pyinstaller --onefiler --noconsole --windowed LinhaMestre.py
+
+codesnap
+CTRL + shift + p
+codesnap
