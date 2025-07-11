@@ -2574,6 +2574,264 @@ class BundledCapacitanceCalculator:
                 row_values.append(formatted_value)
             self.lista_CAP.insert("", END, text=row_label, values=tuple(row_values))
 
+# --- CLASSE DA JANELA PARA CÁLCULO DE CAPACITÂNCIA DE SEQUÊNCIA ---
+class SequenceCapacitanceCalculator:
+    def __init__(self, master_window):
+        self.master_window = master_window
+        self.calc_window = Toplevel(master_window)
+        self._setup_window()
+        self._setup_frames()
+        self._setup_widgets()
+        self._setup_treeview()
+
+        # Preenche a Treeview com campos vazios ao iniciar a janela
+        self._insert_data_to_treeview(np.full((3, 3), np.nan + 0j, dtype=complex))
+
+    def _setup_window(self):
+        self.calc_window.title("Cálculo de Capacitância de Sequência")
+        self.calc_window.geometry("750x550") # Tamanho ajustado
+        self.calc_window.configure(background='#2F4F4F')
+        self.calc_window.resizable(False, False)
+        self.calc_window.protocol("WM_DELETE_WINDOW", self._on_closing)
+
+    def _on_closing(self):
+        self.calc_window.destroy()
+        self.master_window.deiconify() # Reexibe a janela principal
+
+    def _setup_frames(self):
+        self.frame_info = Frame(self.calc_window, bd=4, bg='#BEBEBE', highlightthickness=3)
+        self.frame_info.place(relx=0.02, rely=0.02, relwidth=0.96, relheight=0.45) # Ajusta altura
+
+        self.frame_result = Frame(self.calc_window, bd=4, bg='#BEBEBE', highlightthickness=3)
+        self.frame_result.place(relx=0.02, rely=0.5, relwidth=0.96, relheight=0.48) # Ajusta posição e altura
+
+    def _setup_widgets(self):
+        # --- Botões ---
+        self.botao_return = Button(self.frame_info, text='Retornar', bd=4,
+                                   font=('Arial',10), command=self._on_closing)
+        self.botao_return.place(relx=.01, rely=.01, relwidth=0.15, relheight=0.1)
+
+        self.botao_limpar = Button(self.frame_info, text='Limpar', bd=4,
+                                   font=('Arial',10), command=self._clear_inputs)
+        self.botao_limpar.place(relx=.80, rely=.01, relwidth=0.15, relheight=0.1)
+
+        self.botao_calc = Button(self.frame_info, text='Calcular', bd=4,
+                                 font=('Arial',10), command=self._calculate_sequence_capacitance)
+        self.botao_calc.place(relx=.8, rely=.85, relwidth=0.15, relheight=0.1)
+
+        # --- Labels e Entradas de Raios dos Condutores ---
+        Label(self.frame_info, text='Raios dos Condutores (m)', bg='#BEBEBE', font=('Arial', 10, 'bold')).place(relx=0.01, rely=.15)
+
+        Label(self.frame_info, text='Ra:', bg='#BEBEBE').place(relx=0.01, rely=.25)
+        self.ra_entry = Entry(self.frame_info, width=10)
+        self.ra_entry.place(relx=.08, rely=.25)
+
+        Label(self.frame_info, text='Rb:', bg='#BEBEBE').place(relx=0.01, rely=.35)
+        self.rb_entry = Entry(self.frame_info, width=10)
+        self.rb_entry.place(relx=.08, rely=.35)
+
+        Label(self.frame_info, text='Rc:', bg='#BEBEBE').place(relx=0.01, rely=.45)
+        self.rc_entry = Entry(self.frame_info, width=10)
+        self.rc_entry.place(relx=.08, rely=.45)
+
+        # --- Labels e Entradas de Coordenadas X dos Condutores ---
+        Label(self.frame_info, text='Coordenadas Horizontais (X) [m]', bg='#BEBEBE', font=('Arial', 10, 'bold')).place(relx=0.3, rely=.15)
+
+        Label(self.frame_info, text='Xa:', bg='#BEBEBE').place(relx=.3, rely=.25)
+        self.xa_entry = Entry(self.frame_info, width=10)
+        self.xa_entry.place(relx=.37, rely=.25)
+
+        Label(self.frame_info, text='Xb:', bg='#BEBEBE').place(relx=.3, rely=.35)
+        self.xb_entry = Entry(self.frame_info, width=10)
+        self.xb_entry.place(relx=.37, rely=.35)
+
+        Label(self.frame_info, text='Xc:', bg='#BEBEBE').place(relx=.3, rely=.45)
+        self.xc_entry = Entry(self.frame_info, width=10)
+        self.xc_entry.place(relx=.37, rely=.45)
+
+        # --- Labels e Entradas de Alturas dos Condutores ---
+        Label(self.frame_info, text='Alturas (H) acima do solo [m]', bg='#BEBEBE', font=('Arial', 10, 'bold')).place(relx=0.6, rely=.15)
+
+        Label(self.frame_info, text='Ha:', bg='#BEBEBE').place(relx=.6, rely=.25)
+        self.ha_entry = Entry(self.frame_info, width=10)
+        self.ha_entry.place(relx=.67, rely=.25)
+
+        Label(self.frame_info, text='Hb:', bg='#BEBEBE').place(relx=.6, rely=.35)
+        self.hb_entry = Entry(self.frame_info, width=10)
+        self.hb_entry.place(relx=.67, rely=.35)
+
+        Label(self.frame_info, text='Hc:', bg='#BEBEBE').place(relx=.6, rely=.45)
+        self.hc_entry = Entry(self.frame_info, width=10)
+        self.hc_entry.place(relx=.67, rely=.45)
+
+        # --- Entrada de Resistividade do Solo ---
+        Label(self.frame_info, text='Resistividade Solo (rho) [Ohm.m]:', bg='#BEBEBE', font=('Arial', 10, 'bold')).place(relx=0.01, rely=.6)
+        self.rho_entry = Entry(self.frame_info, width=10)
+        self.rho_entry.place(relx=.25, rely=.6)
+
+    def _setup_treeview(self):
+        # A Treeview para Capacitância de Sequência precisa de 3 colunas (0, 1, 2)
+        # e deve exibir partes real e imaginária.
+        self.lista_CAP_SEQ = ttk.Treeview(self.frame_result, height=3,
+                                          columns=('col0','col1','col2'))
+        self.lista_CAP_SEQ.heading("#0", text="Componente")
+        self.lista_CAP_SEQ.heading("col0", text="Seq. 0")
+        self.lista_CAP_SEQ.heading("col1", text="Seq. 1")
+        self.lista_CAP_SEQ.heading("col2", text="Seq. 2")
+
+        self.lista_CAP_SEQ.column("#0", width=120, anchor=CENTER)
+        self.lista_CAP_SEQ.column("col0", width=180, anchor=CENTER)
+        self.lista_CAP_SEQ.column("col1", width=180, anchor=CENTER)
+        self.lista_CAP_SEQ.column("col2", width=180, anchor=CENTER)
+
+        self.lista_CAP_SEQ.place(relx=0.01, rely=0.1, relwidth=0.95, relheight=0.85)
+
+        self.scrollLista = Scrollbar(self.frame_result, orient='vertical')
+        self.lista_CAP_SEQ.configure(yscrollcommand=self.scrollLista.set)
+        self.scrollLista.place(relx=0.96, rely=0.1, relwidth=0.02, relheight=0.85)
+
+    def _clear_inputs(self):
+        # Limpa todos os campos de entrada
+        self.ra_entry.delete(0, END)
+        self.rb_entry.delete(0, END)
+        self.rc_entry.delete(0, END)
+        self.xa_entry.delete(0, END)
+        self.xb_entry.delete(0, END)
+        self.xc_entry.delete(0, END)
+        self.ha_entry.delete(0, END)
+        self.hb_entry.delete(0, END)
+        self.hc_entry.delete(0, END)
+        self.rho_entry.delete(0, END)
+
+        # Limpa a Treeview e a preenche com NaN
+        self._insert_data_to_treeview(np.full((3, 3), np.nan + 0j, dtype=complex))
+
+    def _get_input_values(self):
+        try:
+            # Raios dos condutores
+            ra = float(self.ra_entry.get())
+            rb = float(self.rb_entry.get())
+            rc = float(self.rc_entry.get())
+
+            # Coordenadas X
+            xa = float(self.xa_entry.get())
+            xb = float(self.xb_entry.get())
+            xc = float(self.xc_entry.get())
+
+            # Alturas H
+            ha = float(self.ha_entry.get())
+            hb = float(self.hb_entry.get())
+            hc = float(self.hc_entry.get())
+
+            # Resistividade do solo
+            rho = float(self.rho_entry.get())
+
+            return {
+                'ra': ra, 'rb': rb, 'rc': rc,
+                'xa': xa, 'xb': xb, 'xc': xc,
+                'ha': ha, 'hb': hb, 'hc': hc,
+                'rho': rho
+            }
+        except ValueError as e:
+            messagebox.showerror("Erro de Entrada", f"Por favor, insira valores numéricos válidos. Verifique todos os campos. Detalhes: {e}")
+            return None
+        except Exception as e:
+            messagebox.showerror("Erro", f"Um erro inesperado ocorreu ao obter os valores: {e}")
+            return None
+
+    def _calculate_sequence_capacitance(self):
+        params = self._get_input_values()
+        if params is None:
+            return
+
+        try:
+            # Chama a função de cálculo da capacitância de sequência
+            # Certifique-se de que 'metodo_capacitancia_sequencia_tran' esteja acessível aqui
+            C_seq_matrix = metodo_capacitancia_sequencia_tran(
+                ra=params['ra'], rb=params['rb'], rc=params['rc'],
+                xa=params['xa'], xb=params['xb'], xc=params['xc'],
+                ha=params['ha'], hb=params['hb'], hc=params['hc'],
+                rho=params['rho']
+            )
+
+            # Para exibição, podemos converter para pF/m (picofarads por metro) ou nF/m
+            # C_seq_matrix_pF_per_m = C_seq_matrix * 1e12 # Farads/m -> pF/m
+            # Vamos exibir em nF/m para consistência com outras janelas
+            C_seq_matrix_nF_per_m = C_seq_matrix * 1e9 # Farads/m -> nF/m
+
+            self._insert_data_to_treeview(C_seq_matrix_nF_per_m)
+            messagebox.showinfo("Cálculo Concluído", "A matriz de capacitância de sequência foi calculada e exibida na tabela (nF/m).")
+        except NameError:
+            messagebox.showerror("Erro de Função", "A função 'metodo_capacitancia_sequencia_tran' não foi encontrada. Certifique-se de que está definida ou importada.")
+        except ValueError as e:
+            messagebox.showerror("Erro de Cálculo", f"Ocorreu um erro durante o cálculo: {e}")
+        except Exception as e:
+            messagebox.showerror("Erro Inesperado", f"Ocorreu um erro inesperado: {e}")
+
+    def _insert_data_to_treeview(self, C_seq_matrix):
+        for i in self.lista_CAP_SEQ.get_children():
+            self.lista_CAP_SEQ.delete(i)
+
+        # Formato para exibir números complexos (parte real + parte imaginária)
+        # Usando '{:.4e}' para notação científica com 4 casas decimais para cada parte.
+        complex_format = "{:.4e} + j{:.4e}"
+        
+        # Inserir a parte real
+        real_values = []
+        for j in range(C_seq_matrix.shape[1]):
+            value = C_seq_matrix[0, j].real # Capacitância de Sequência Zero
+            if np.isnan(value):
+                real_values.append("")
+            else:
+                real_values.append(f"{value:.4e}")
+        self.lista_CAP_SEQ.insert("", END, text="Real (0)", values=tuple(real_values))
+
+        real_values = []
+        for j in range(C_seq_matrix.shape[1]):
+            value = C_seq_matrix[1, j].real # Capacitância de Sequência Positiva
+            if np.isnan(value):
+                real_values.append("")
+            else:
+                real_values.append(f"{value:.4e}")
+        self.lista_CAP_SEQ.insert("", END, text="Real (1)", values=tuple(real_values))
+
+        real_values = []
+        for j in range(C_seq_matrix.shape[1]):
+            value = C_seq_matrix[2, j].real # Capacitância de Sequência Negativa
+            if np.isnan(value):
+                real_values.append("")
+            else:
+                real_values.append(f"{value:.4e}")
+        self.lista_CAP_SEQ.insert("", END, text="Real (2)", values=tuple(real_values))
+
+        # Inserir a parte imaginária
+        imag_values = []
+        for j in range(C_seq_matrix.shape[1]):
+            value = C_seq_matrix[0, j].imag # Capacitância de Sequência Zero Imaginária
+            if np.isnan(value):
+                imag_values.append("")
+            else:
+                imag_values.append(f"{value:.4e}")
+        self.lista_CAP_SEQ.insert("", END, text="Imaginário (0)", values=tuple(imag_values))
+
+        imag_values = []
+        for j in range(C_seq_matrix.shape[1]):
+            value = C_seq_matrix[1, j].imag # Capacitância de Sequência Positiva Imaginária
+            if np.isnan(value):
+                imag_values.append("")
+            else:
+                imag_values.append(f"{value:.4e}")
+        self.lista_CAP_SEQ.insert("", END, text="Imaginário (1)", values=tuple(imag_values))
+        
+        imag_values = []
+        for j in range(C_seq_matrix.shape[1]):
+            value = C_seq_matrix[2, j].imag # Capacitância de Sequência Negativa Imaginária
+            if np.isnan(value):
+                imag_values.append("")
+            else:
+                imag_values.append(f"{value:.4e}")
+        self.lista_CAP_SEQ.insert("", END, text="Imaginário (2)", values=tuple(imag_values))
+
 # --- Classe Principal da Aplicação (Tela de Seleção de Métodos) ---
 class AppMain:
     def __init__(self, master):
@@ -2654,9 +2912,9 @@ class AppMain:
         elif selected_method == "Transversal feixe de condutor": # Nova condição para o método de Carson
             self.root.withdraw() # Esconde a janela principal
             BundledCapacitanceCalculator(self.root) # Instancia a nova janela de Carson
-        #elif selected_method == "Transversal capacitância de sequências": # Nova condição para o método de Carson
-        #    self.root.withdraw() # Esconde a janela principal
-        #    SymmetricalComponentAnalyzer(self.root) # Instancia a nova janela de Carson
+        elif selected_method == "Transversal capacitância de sequências": # Nova condição para o método de Carson
+            self.root.withdraw() # Esconde a janela principal
+            SequenceCapacitanceCalculator(self.root) # Instancia a nova janela de Carson
         else:
             messagebox.showinfo("Método Não Implementado", f"O método '{selected_method}' ainda não foi implementado. Por favor, selecione 'Longitudinal Imagem' ou 'Longitudinal Carson (Correção)'.")
 
