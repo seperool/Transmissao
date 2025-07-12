@@ -4,7 +4,7 @@ import cmath
 
 import unittest
 
-def comp_sim_sintese(Van0_modulo, Van0_angulo, Van1_modulo, Van1_angulo, Van2_modulo, Van2_angulo):
+def comp_sim_sintese(Zan0_modulo, Zan0_angulo, Zan1_modulo, Zan1_angulo, Zan2_modulo, Zan2_angulo):
     """
     Realiza a síntese das componentes simétricas para obter as tensões de fase.
     
@@ -25,20 +25,20 @@ def comp_sim_sintese(Van0_modulo, Van0_angulo, Van1_modulo, Van1_angulo, Van2_mo
     """
     
     # Convertendo as componentes de sequência para números complexos (fasores)
-    angulo_rad_0 = math.radians(Van0_angulo)
-    Van0 = cmath.rect(Van0_modulo, angulo_rad_0)
+    angulo_rad_0 = math.radians(Zan0_angulo)
+    Zan0 = cmath.rect(Zan0_modulo, angulo_rad_0)
     # print(f"Van0 (complexo): {Van0:.4f}") 
 
-    angulo_rad_1 = math.radians(Van1_angulo)
-    Van1 = cmath.rect(Van1_modulo, angulo_rad_1)
+    angulo_rad_1 = math.radians(Zan1_angulo)
+    Zan1 = cmath.rect(Zan1_modulo, angulo_rad_1)
     # print(f"Van1 (complexo): {Van1:.4f}")
 
-    angulo_rad_2 = math.radians(Van2_angulo)
-    Van2 = cmath.rect(Van2_modulo, angulo_rad_2)
+    angulo_rad_2 = math.radians(Zan2_angulo)
+    Zan2 = cmath.rect(Zan2_modulo, angulo_rad_2)
     # print(f"Van2 (complexo): {Van2:.4f}")
 
     # Criando a matriz coluna das componentes de sequência [Van0; Van1; Van2]
-    Van = np.array([[Van0], [Van1], [Van2]])
+    Zan = np.array([[Zan0], [Zan1], [Zan2]])
     # print("\nMatriz Van (Componentes de Sequência):")
     # print(Van)
 
@@ -57,11 +57,11 @@ def comp_sim_sintese(Van0_modulo, Van0_angulo, Van1_modulo, Van1_angulo, Van2_mo
     # print(A)
 
     # Realizando a multiplicação matricial para obter as tensões de fase
-    Vabc = A @ Van
+    Zabc = A @ Zan
     # print("\nMatriz Vabc (Tensões de Fase):")
     # print(Vabc)
 
-    return Vabc
+    return Zabc
 
 class TestCompSimSintese(unittest.TestCase):
 

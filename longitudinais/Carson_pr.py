@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 import math
 
-def metodo_carson_para_raio(ra, rb, rc, rp, xa, xb, xc, xp, ha, hb, hc, hp, rho, R=None, Rmg_val=None):
+def metodo_carson_para_raio(ra, rb, rc, rp, xa, xb, xc, xp, ha, hb, hc, hp, rho, l, R=None, Rmg_val=None):
     """
     Calcula a impedância longitudinal de uma linha de transmissão trifásica com cabo para-raios,
     usando o Método de Carson e a redução de Kron.
@@ -91,7 +91,7 @@ def metodo_carson_para_raio(ra, rb, rc, rp, xa, xb, xc, xp, ha, hb, hc, hp, rho,
 
     Zp = Z_1 - termo_correcao # Matriz de impedância de fase final.
 
-    return Zp
+    return Zp*l
 
 ### Classe de Teste `TestMetodoCarsonParaRaio` (Com a Correção)
 

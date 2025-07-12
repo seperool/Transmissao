@@ -4,7 +4,7 @@ import cmath # Importa o módulo cmath para operações com números complexos (
 
 import unittest
 
-def comp_sim_analise(Va_modulo, Va_angulo, Vb_modulo, Vb_angulo, Vc_modulo, Vc_angulo):
+def comp_sim_analise(Za_modulo, Za_angulo, Zb_modulo, Zb_angulo, Zc_modulo, Zc_angulo):
     """
     Realiza a análise das componentes simétricas, transformando as tensões de fase (Va, Vb, Vc)
     em suas respectivas componentes de sequência (V0 - zero, V1 - positiva, V2 - negativa).
@@ -24,20 +24,20 @@ def comp_sim_analise(Va_modulo, Va_angulo, Vb_modulo, Vb_angulo, Vc_modulo, Vc_a
     
     # 1. Conversão das tensões de fase do formato polar (módulo e ângulo) para fasores complexos.
     # Fasor Va
-    angulo_rad_Va = math.radians(Va_angulo) # Converte o ângulo de graus para radianos.
-    Va = cmath.rect(Va_modulo, angulo_rad_Va) # Cria o número complexo (fasor) a partir do módulo e ângulo em radianos.
+    angulo_rad_Za = math.radians(Za_angulo) # Converte o ângulo de graus para radianos.
+    Za = cmath.rect(Za_modulo, angulo_rad_Za) # Cria o número complexo (fasor) a partir do módulo e ângulo em radianos.
 
     # Fasor Vb
-    angulo_rad_Vb = math.radians(Vb_angulo)
-    Vb = cmath.rect(Vb_modulo, angulo_rad_Vb)
+    angulo_rad_Zb = math.radians(Zb_angulo)
+    Zb = cmath.rect(Zb_modulo, angulo_rad_Zb)
 
     # Fasor Vc
-    angulo_rad_Vc = math.radians(Vc_angulo)
-    Vc = cmath.rect(Vc_modulo, angulo_rad_Vc)
+    angulo_rad_Zc = math.radians(Zc_angulo)
+    Zc = cmath.rect(Zc_modulo, angulo_rad_Zc)
 
     # 2. Criação da matriz coluna das tensões de fase [Va; Vb; Vc].
     # Esta matriz é essencial para a operação de multiplicação matricial.
-    Vabc = np.array([[Va], [Vb], [Vc]])
+    Zabc = np.array([[Za], [Zb], [Zc]])
     
     # As linhas 'print' abaixo são úteis para depuração, mas devem ser comentadas ou removidas
     # em versões finais do código para evitar saídas desnecessárias.
@@ -63,12 +63,12 @@ def comp_sim_analise(Va_modulo, Va_angulo, Vb_modulo, Vb_angulo, Vc_modulo, Vc_a
 
     # 5. Realização da multiplicação matricial para obter as componentes de sequência.
     # A fórmula para a análise é: [V0; V1; V2] = (1/3) * A @ [Va; Vb; Vc].
-    V012 = (1/3) * A @ Vabc
+    Z012 = (1/3) * A @ Zabc
     # print("\nComponentes de Sequência Resultantes [V0; V1; V2]:")
     # print(V012)
 
     # Retorna o array NumPy contendo as componentes de sequência calculadas.
-    return V012
+    return Z012
 
 class TestCompSimAnalise(unittest.TestCase):
     

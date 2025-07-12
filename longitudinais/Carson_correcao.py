@@ -1,7 +1,7 @@
 import math # Importa o módulo math para funções matemáticas como pi, sqrt e log
 import numpy as np # Importa a biblioteca NumPy para operações com arrays e matrizes, especialmente úteis para números complexos
 
-def Metodo_Carson_long(ra, rb, rc, xa, xb, xc, ha, hb, hc, rho, R=None, Rmg_val=None):
+def Metodo_Carson_long(ra, rb, rc, xa, xb, xc, ha, hb, hc, rho, l, R=None, Rmg_val=None):
     """
     Método de Carson com correção para cálculo de impedâncias longitudinais
     em linhas de transmissão trifásicas, sem cabo para-raio.
@@ -100,4 +100,4 @@ def Metodo_Carson_long(ra, rb, rc, xa, xb, xc, ha, hb, hc, rho, R=None, Rmg_val=
         [Zca, Zcb, Zcc]
     ]) * 1000 # Converter para Ohms/km
 
-    return Z # Retorna a matriz de impedância longitudinal da linha
+    return Z*l # Retorna a matriz de impedância longitudinal da linha
