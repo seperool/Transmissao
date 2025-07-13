@@ -34,49 +34,48 @@ from Transversais.capacitancia_de_sequencia import metodo_capacitancia_sequencia
 
 # Classes de Janelas da Interface Gráfica
 
-# --- Classe para a Tela de Cálculo do Método das Imagens Longitudinais (Mantida para o método "Longitudinal Imagem") ---
+# --- Classe para a Tela de Cálculo do Método das Imagens Longitudinais ---
 class LongitudinalImageCalculator:
     def __init__(self, master_window):
-        self.master_window = master_window                              # Armazena a janela principal para retornar
-        self.calc_window = Toplevel(master_window)                      # Cria uma nova janela Toplevel para este método
-        self._setup_window()                                            # Configura propriedades da janela
-        self._setup_frames()                                            # Cria e posiciona os frames
-        self._setup_widgets()                                           # Cria e posiciona os widgets de entrada e botões
-        self._setup_treeview()                                          # Configura a Treeview
+        self.master_window = master_window
+        self.calc_window = Toplevel(master_window)
+        self._setup_window()
+        self._setup_frames()
+        self._setup_widgets()
+        self._setup_treeview()
         
-        # Preenche a Treeview com campos vazios ao iniciar a janela
         self._insert_data_to_treeview(np.full((3, 3), np.nan, dtype=complex))
 
     def _setup_window(self):
-        self.calc_window.title("Cálculo de Impedância - Longitudinal Imagem") # Título da janela de cálculo
-        self.calc_window.geometry("700x500")                            # Dimensões da janela
-        self.calc_window.configure(background='#2F4F4F')                # Cor de fundo
-        self.calc_window.resizable(False, False)                        # Impede redimensionamento
-        self.calc_window.protocol("WM_DELETE_WINDOW", self._on_closing) # Gerencia fechamento da janela
+        self.calc_window.title("Cálculo de Impedância - Longitudinal Imagem")
+        self.calc_window.geometry("700x500")
+        self.calc_window.configure(background='#2F4F4F')
+        self.calc_window.resizable(False, False)
+        self.calc_window.protocol("WM_DELETE_WINDOW", self._on_closing)
 
     def _on_closing(self):
-        self.calc_window.destroy()                                      # Destroi a janela de cálculo
-        self.master_window.deiconify()                                  # Reexibe a janela principal
+        self.calc_window.destroy()
+        self.master_window.deiconify()
 
     def _setup_frames(self):
-        self.frame_info = Frame(self.calc_window, bd=4, bg='#BEBEBE', highlightthickness=3) # Frame superior para entradas
+        self.frame_info = Frame(self.calc_window, bd=4, bg='#BEBEBE', highlightthickness=3)
         self.frame_info.place(relx=0.02, rely=0.02, relwidth=0.96, relheight=0.45)
 
-        self.frame_result = Frame(self.calc_window, bd=4, bg='#BEBEBE', highlightthickness=3) # Frame inferior para resultados
+        self.frame_result = Frame(self.calc_window, bd=4, bg='#BEBEBE', highlightthickness=3)
         self.frame_result.place(relx=0.02, rely=0.5, relwidth=0.96, relheight=0.45)
 
     def _setup_widgets(self):
         # --- Botões ---
         self.botao_return = Button(self.frame_info, text='Retornar', bd=4,
-                                        font=('Arial',10), command=self._on_closing) # Botão "Retornar" com ação de fechamento
+                                    font=('Arial',10), command=self._on_closing)
         self.botao_return.place(relx=.01, rely=.01, relwidth=0.15, relheight=0.1)
 
         self.botao_limpar = Button(self.frame_info, text='Limpar', bd=4,
-                                        font=('Arial',10), command=self._clear_inputs) # Botão "Limpar" com ação
+                                    font=('Arial',10), command=self._clear_inputs)
         self.botao_limpar.place(relx=.80, rely=.01, relwidth=0.15, relheight=0.1)
 
         self.botao_calc = Button(self.frame_info, text='Calcular', bd=4,
-                                     font=('Arial',10), command=self._calculate_impedance) # Botão "Calcular" com ação
+                                   font=('Arial',10), command=self._calculate_impedance)
         self.botao_calc.place(relx=.8, rely=.85, relwidth=0.15, relheight=0.1)
 
         # --- Labels e Entradas de Resistências ---
@@ -130,10 +129,14 @@ class LongitudinalImageCalculator:
         self.hc_entry = Entry(self.frame_info)
         self.hc_entry.place(relx=.68, rely=.56, relwidth=0.08)
 
+        Label(self.frame_info, text='Comp. da Linha (l) [km]:', bg='#BEBEBE').place(relx=.4, rely=.68)
+        self.l_entry = Entry(self.frame_info)
+        self.l_entry.place(relx=.68, rely=.68, relwidth=0.08)
+
     def _setup_treeview(self):
         self.lista_CAP = ttk.Treeview(self.frame_result, height=3,
-                                          columns=('col1','col2','col3'))
-        self.lista_CAP.heading("#0", text="Fase")
+                                           columns=('col1','col2','col3'))
+        self.lista_CAP.heading("#0", text="")
         self.lista_CAP.heading("col1", text="Condutor A")
         self.lista_CAP.heading("col2", text="Condutor B")
         self.lista_CAP.heading("col3", text="Condutor C")
@@ -161,6 +164,7 @@ class LongitudinalImageCalculator:
         self.ha_entry.delete(0,END)
         self.hb_entry.delete(0,END)
         self.hc_entry.delete(0,END)
+        self.l_entry.delete(0,END)
         self._insert_data_to_treeview(np.full((3, 3), np.nan, dtype=complex))
 
     def _get_input_values(self):
@@ -186,13 +190,17 @@ class LongitudinalImageCalculator:
             hb = float(self.hb_entry.get()) if self.hb_entry.get() else 0.0
             hc = float(self.hc_entry.get()) if self.hc_entry.get() else 0.0
             
-            # Não há `rho` neste método
+            # Novo: Comprimento da linha em quilômetros (input do usuário)
+            l_km = float(self.l_entry.get()) if self.l_entry.get() else 0.0
+            # Convertendo para metros, pois a função espera metros
+            l_meters = l_km * 1000.0
             
             return {
                 'ra': ra, 'rb': rb, 'rc': rc,
                 'xa': xa, 'ha': ha,
                 'xb': xb, 'hb': hb,
                 'xc': xc, 'hc': hc,
+                'l': l_meters,
                 'R': R_val, 'Rmg_val': Rmg_val
             }
         except ValueError as e:
@@ -210,6 +218,7 @@ class LongitudinalImageCalculator:
                 xa=params['xa'], ha=params['ha'],
                 xb=params['xb'], hb=params['hb'],
                 xc=params['xc'], hc=params['hc'],
+                l=params['l'],
                 R=params['R'], Rmg_val=params['Rmg_val']
             )
             self._insert_data_to_treeview(Z_matrix)
@@ -223,7 +232,7 @@ class LongitudinalImageCalculator:
         for i in self.lista_CAP.get_children():
             self.lista_CAP.delete(i)
         
-        complex_format = "({:.6f} + j{:.6f})" # Formato para exibir números complexos com 6 casas decimais
+        complex_format = "({:.6f} + j{:.6f})" # Formato para exibir números complexos
         row_labels = ["A", "B", "C"]
 
         for i, row_label in enumerate(row_labels):
@@ -237,7 +246,6 @@ class LongitudinalImageCalculator:
                 row_values.append(formatted_value)
             self.lista_CAP.insert("", END, text=row_label, values=tuple(row_values))
 
-# --- Classe para a Tela de Cálculo do Método de Carson Longitudinal (COM CORREÇÃO DE SOLO) ---
 class CarsonLongitudinalCalculator:
     def __init__(self, master_window):
         self.master_window = master_window
@@ -2882,39 +2890,39 @@ class AppMain:
         elif selected_method == "Longitudinal Imagem":
             self.root.withdraw() # Esconde a janela principal
             LongitudinalImageCalculator(self.root) # Passa a referência da janela principal
-        elif selected_method == "Longitudinal Carson (Correção)": # Nova condição para o método de Carson
-            self.root.withdraw() # Esconde a janela principal
-            CarsonLongitudinalCalculator(self.root) # Instancia a nova janela de Carson
-        elif selected_method == "Longitudinal Carson para-raio": # Nova condição para o método de Carson
-            self.root.withdraw() # Esconde a janela principal
-            CarsonGroundWireCalculator(self.root) # Instancia a nova janela de Carson
-        elif selected_method == "Longitudinal Carson transposição": # Nova condição para o método de Carson
-            self.root.withdraw() # Esconde a janela principal
-            CarsonTransposedCalculator(self.root) # Instancia a nova janela de Carson
-        elif selected_method == "Longitudinal Carson feixe de condutor": # Nova condição para o método de Carson
-            self.root.withdraw() # Esconde a janela principal
-            BundleConductorRMGCalculator(self.root) # Instancia a nova janela de Carson
-        elif selected_method == "Longitudinal Síntese de Componentes Simétricas": # Nova condição para o método de Carson
-            self.root.withdraw() # Esconde a janela principal
-            SymmetricalComponentSynthesizer(self.root) # Instancia a nova janela de Carson
-        elif selected_method == "Longitudinal Análise de Componentes Simétricas": # Nova condição para o método de Carson
-            self.root.withdraw() # Esconde a janela principal
-            SymmetricalComponentAnalyzer(self.root) # Instancia a nova janela de Carson
-        elif selected_method == "Transversal imagem": # Nova condição para o método de Carson
-            self.root.withdraw() # Esconde a janela principal
-            CapacitanceImageCalculator(self.root) # Instancia a nova janela de Carson
-        elif selected_method == "Transversal transposição": # Nova condição para o método de Carson
-            self.root.withdraw() # Esconde a janela principal
-            TransposedCapacitanceCalculator(self.root) # Instancia a nova janela de Carson
-        elif selected_method == "Transversal para-raio": # Nova condição para o método de Carson
-            self.root.withdraw() # Esconde a janela principal
-            CapacitanceGroundWireCalculator(self.root) # Instancia a nova janela de Carson
-        elif selected_method == "Transversal feixe de condutor": # Nova condição para o método de Carson
-            self.root.withdraw() # Esconde a janela principal
-            BundledCapacitanceCalculator(self.root) # Instancia a nova janela de Carson
-        elif selected_method == "Transversal capacitância de sequências": # Nova condição para o método de Carson
-            self.root.withdraw() # Esconde a janela principal
-            SequenceCapacitanceCalculator(self.root) # Instancia a nova janela de Carson
+        #elif selected_method == "Longitudinal Carson (Correção)": # Nova condição para o método de Carson
+        #    self.root.withdraw() # Esconde a janela principal
+        #    CarsonLongitudinalCalculator(self.root) # Instancia a nova janela de Carson
+        #elif selected_method == "Longitudinal Carson para-raio": # Nova condição para o método de Carson
+        #    self.root.withdraw() # Esconde a janela principal
+        #    CarsonGroundWireCalculator(self.root) # Instancia a nova janela de Carson
+        #elif selected_method == "Longitudinal Carson transposição": # Nova condição para o método de Carson
+        #    self.root.withdraw() # Esconde a janela principal
+        #    CarsonTransposedCalculator(self.root) # Instancia a nova janela de Carson
+        #elif selected_method == "Longitudinal Carson feixe de condutor": # Nova condição para o método de Carson
+        #    self.root.withdraw() # Esconde a janela principal
+        #    BundleConductorRMGCalculator(self.root) # Instancia a nova janela de Carson
+        #elif selected_method == "Longitudinal Síntese de Componentes Simétricas": # Nova condição para o método de Carson
+        #    self.root.withdraw() # Esconde a janela principal
+        #    SymmetricalComponentSynthesizer(self.root) # Instancia a nova janela de Carson
+        #elif selected_method == "Longitudinal Análise de Componentes Simétricas": # Nova condição para o método de Carson
+        #    self.root.withdraw() # Esconde a janela principal
+        #    SymmetricalComponentAnalyzer(self.root) # Instancia a nova janela de Carson
+        #elif selected_method == "Transversal imagem": # Nova condição para o método de Carson
+        #    self.root.withdraw() # Esconde a janela principal
+        #    CapacitanceImageCalculator(self.root) # Instancia a nova janela de Carson
+        #elif selected_method == "Transversal transposição": # Nova condição para o método de Carson
+        #    self.root.withdraw() # Esconde a janela principal
+        #    TransposedCapacitanceCalculator(self.root) # Instancia a nova janela de Carson
+        #elif selected_method == "Transversal para-raio": # Nova condição para o método de Carson
+        #    self.root.withdraw() # Esconde a janela principal
+        #    CapacitanceGroundWireCalculator(self.root) # Instancia a nova janela de Carson
+        #elif selected_method == "Transversal feixe de condutor": # Nova condição para o método de Carson
+        #    self.root.withdraw() # Esconde a janela principal
+        #    BundledCapacitanceCalculator(self.root) # Instancia a nova janela de Carson
+        #elif selected_method == "Transversal capacitância de sequências": # Nova condição para o método de Carson
+        #    self.root.withdraw() # Esconde a janela principal
+        #    SequenceCapacitanceCalculator(self.root) # Instancia a nova janela de Carson
         else:
             messagebox.showinfo("Método Não Implementado", f"O método '{selected_method}' ainda não foi implementado. Por favor, selecione 'Longitudinal Imagem' ou 'Longitudinal Carson (Correção)'.")
 
