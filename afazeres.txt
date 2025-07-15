@@ -1,6 +1,6 @@
-ESCRITO EM 12/07/25
+ESCRITO EM 14/07/25
 ---
-PARA 13/07/25
+PARA 15/07/25
 ---
 Subir github:
 
@@ -32,7 +32,6 @@ Afazeres:
 		
 		- testar metodos:
 			- Longitudinais
-				- Imagem
 				- Carson com correção
 				- Carson com para-raio
 				- Transposição
@@ -44,7 +43,6 @@ Afazeres:
 		
 		- Re-implementar no front-end.
 			- Longitudinais
-				- Imagem
 				- Carson com correção
 				- Carson com para-raio
 				- Transposição
@@ -56,7 +54,6 @@ Afazeres:
 
 		- Testar janela por janela:
 			- Longitudinais
-				- Imagem
 				- Carson com correção
 				- Carson com para-raio
 				- Transposição
