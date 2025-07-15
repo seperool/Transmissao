@@ -246,6 +246,7 @@ class LongitudinalImageCalculator:
                 row_values.append(formatted_value)
             self.lista_CAP.insert("", END, text=row_label, values=tuple(row_values))
 
+# --- Classe para a Tela de Cálculo do Método de Carson com correção Longitudinais ---
 class CarsonLongitudinalCalculator:
     def __init__(self, master_window):
         self.master_window = master_window
