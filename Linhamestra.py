@@ -298,11 +298,29 @@ class LongitudinalImageCalculator:
                 row_values.append(formatted_value)
             self.lista_CAP.insert("", END, text=row_label, values=tuple(row_values))
 
-# --- Classe para a Tela de Cálculo do Método de Carson com correção Longitudinais ---
+# --- Classe para a Tela de Cálculo do Método de Carson com Correção Longitudinais ---
 class CarsonLongitudinalCalculator:
     def __init__(self, master_window):
         self.master_window = master_window
         self.carson_window = Toplevel(master_window)
+        
+        # --- Valores padrão para os campos de entrada ---
+        self._default_values = {
+            'ra': 0.1,    # Ohm/km
+            'rb': 0.1,    # Ohm/km
+            'rc': 0.1,    # Ohm/km
+            'R': 0.01,    # m
+            'Rmg': '',    # Pode deixar vazio se R for o padrão
+            'rho': 100.0, # Ohm-m
+            'xa': 0.0,    # m
+            'xb': 3.0,    # m
+            'xc': 6.0,    # m
+            'ha': 15.0,   # m
+            'hb': 15.0,   # m
+            'hc': 15.0,   # m
+            'l': 10.0     # km
+        }
+
         self._setup_window()
         self._setup_frames()
         self._setup_widgets()
@@ -312,7 +330,7 @@ class CarsonLongitudinalCalculator:
         self._insert_data_to_treeview(np.full((3, 3), np.nan, dtype=complex))
 
     def _setup_window(self):
-        self.carson_window.title("Cálculo de Impedância - Longitudinal Carson (Correção)") # Título da janela de cálculo
+        self.carson_window.title("Cálculo de Impedância - Longitudinal Carson (Correção)")
         self.carson_window.geometry("700x500")
         self.carson_window.configure(background='#2F4F4F')
         self.carson_window.resizable(False, False)
@@ -332,15 +350,15 @@ class CarsonLongitudinalCalculator:
     def _setup_widgets(self):
         # --- Botões ---
         self.botao_return = Button(self.frame_info, text='Retornar', bd=4,
-                                        font=('Arial',10), command=self._on_closing)
+                                   font=('Arial',10), command=self._on_closing)
         self.botao_return.place(relx=.01, rely=.01, relwidth=0.15, relheight=0.1)
 
         self.botao_limpar = Button(self.frame_info, text='Limpar', bd=4,
-                                        font=('Arial',10), command=self._clear_inputs)
+                                   font=('Arial',10), command=self._clear_inputs)
         self.botao_limpar.place(relx=.80, rely=.01, relwidth=0.15, relheight=0.1)
 
         self.botao_calc = Button(self.frame_info, text='Calcular', bd=4,
-                                     font=('Arial',10), command=self._calculate_impedance)
+                                  font=('Arial',10), command=self._calculate_impedance)
         self.botao_calc.place(relx=.8, rely=.85, relwidth=0.15, relheight=0.1)
 
         # --- Labels e Entradas de Resistências ---
@@ -349,28 +367,34 @@ class CarsonLongitudinalCalculator:
         Label(self.frame_info, text='Ra:', bg='#BEBEBE').place(relx=0.01, rely=.32)
         self.ra_entry = Entry(self.frame_info)
         self.ra_entry.place(relx=.25, rely=.32, relwidth=0.08)
+        self.ra_entry.insert(0, self._default_values['ra']) # Default Value
 
         Label(self.frame_info, text='Rb:', bg='#BEBEBE').place(relx=0.01, rely=.44)
         self.rb_entry = Entry(self.frame_info)
         self.rb_entry.place(relx=.25, rely=.44, relwidth=0.08)
+        self.rb_entry.insert(0, self._default_values['rb']) # Default Value
 
         Label(self.frame_info, text='Rc:', bg='#BEBEBE').place(relx=0.01, rely=.56)
         self.rc_entry = Entry(self.frame_info)
         self.rc_entry.place(relx=.25, rely=.56, relwidth=0.08)
+        self.rc_entry.insert(0, self._default_values['rc']) # Default Value
 
         # --- Labels e Entradas de Raio e RMG ---
         Label(self.frame_info, text='Raio Condutor (R) [m]', bg='#BEBEBE').place(relx=0.01, rely=.68)
         self.r_entry = Entry(self.frame_info)
-        self.r_entry.place(relx=.25, rely=.68, relwidth=0.08) # Ajustado relx para alinhar com resistências
+        self.r_entry.place(relx=.25, rely=.68, relwidth=0.08)
+        self.r_entry.insert(0, self._default_values['R']) # Default Value
 
         Label(self.frame_info, text='OU RMG [m]', bg='#BEBEBE').place(relx=0.01, rely=.80)
         self.rmg_entry = Entry(self.frame_info)
-        self.rmg_entry.place(relx=.25, rely=.80, relwidth=0.08) # Ajustado relx para alinhar com resistências
+        self.rmg_entry.place(relx=.25, rely=.80, relwidth=0.08)
+        self.rmg_entry.insert(0, self._default_values['Rmg']) # Default Value (vazio)
 
-        # --- Labels e Entradas de Resistividade do Solo (NOVO) ---
-        Label(self.frame_info, text='Resistividade do Solo (ρ) [Ohm-m]', bg='#BEBEBE').place(relx=0.01, rely=.1) # Nova posição para resistividade
+        # --- Labels e Entradas de Resistividade do Solo ---
+        Label(self.frame_info, text='Resistividade do Solo (ρ) [Ohm-m]', bg='#BEBEBE').place(relx=0.4, rely=.1)
         self.rho_entry = Entry(self.frame_info)
-        self.rho_entry.place(relx=.3, rely=.1, relwidth=0.08) # Nova posição para o campo de entrada
+        self.rho_entry.place(relx=.68, rely=.1, relwidth=0.08) # Alinhado com as coordenadas X
+        self.rho_entry.insert(0, self._default_values['rho']) # Default Value
 
         # --- Labels e Entradas de Coordenadas ---
         Label(self.frame_info, text='Coordenadas dos Cabos (m)', bg='#BEBEBE').place(relx=.4, rely=.2)
@@ -378,30 +402,42 @@ class CarsonLongitudinalCalculator:
         Label(self.frame_info, text='Xa:', bg='#BEBEBE').place(relx=.4, rely=.32)
         self.xa_entry = Entry(self.frame_info)
         self.xa_entry.place(relx=.48, rely=.32, relwidth=0.08)
+        self.xa_entry.insert(0, self._default_values['xa']) # Default Value
 
         Label(self.frame_info, text='Xb:', bg='#BEBEBE').place(relx=.4, rely=.44)
         self.xb_entry = Entry(self.frame_info)
         self.xb_entry.place(relx=.48, rely=.44, relwidth=0.08)
+        self.xb_entry.insert(0, self._default_values['xb']) # Default Value
 
         Label(self.frame_info, text='Xc:', bg='#BEBEBE').place(relx=.4, rely=.56)
         self.xc_entry = Entry(self.frame_info)
         self.xc_entry.place(relx=.48, rely=.56, relwidth=0.08)
+        self.xc_entry.insert(0, self._default_values['xc']) # Default Value
 
         Label(self.frame_info, text='Ha:', bg='#BEBEBE').place(relx=.6, rely=.32)
         self.ha_entry = Entry(self.frame_info)
         self.ha_entry.place(relx=.68, rely=.32, relwidth=0.08)
+        self.ha_entry.insert(0, self._default_values['ha']) # Default Value
 
         Label(self.frame_info, text='Hb:', bg='#BEBEBE').place(relx=.6, rely=.44)
         self.hb_entry = Entry(self.frame_info)
         self.hb_entry.place(relx=.68, rely=.44, relwidth=0.08)
+        self.hb_entry.insert(0, self._default_values['hb']) # Default Value
 
         Label(self.frame_info, text='Hc:', bg='#BEBEBE').place(relx=.6, rely=.56)
         self.hc_entry = Entry(self.frame_info)
         self.hc_entry.place(relx=.68, rely=.56, relwidth=0.08)
+        self.hc_entry.insert(0, self._default_values['hc']) # Default Value
+
+        # --- Labels e Entradas de Comprimento da Linha ---
+        Label(self.frame_info, text='Comp. da Linha (l) [km]:', bg='#BEBEBE').place(relx=.4, rely=.68)
+        self.l_entry = Entry(self.frame_info)
+        self.l_entry.place(relx=.68, rely=.68, relwidth=0.08)
+        self.l_entry.insert(0, self._default_values['l']) # Default Value
 
     def _setup_treeview(self):
         self.lista_CAP = ttk.Treeview(self.frame_result, height=3,
-                                          columns=('col1','col2','col3'))
+                                         columns=('col1','col2','col3'))
         self.lista_CAP.heading("#0", text="")
         self.lista_CAP.heading("col1", text="Condutor A")
         self.lista_CAP.heading("col2", text="Condutor B")
@@ -419,28 +455,45 @@ class CarsonLongitudinalCalculator:
         self.scrollLista.place(relx=0.96, rely=0.1, relwidth=0.02, relheight=0.85)
 
     def _clear_inputs(self):
+        # Limpa os campos e insere os valores padrão novamente
         self.ra_entry.delete(0,END)
         self.rb_entry.delete(0,END)
         self.rc_entry.delete(0,END)
         self.r_entry.delete(0,END)
         self.rmg_entry.delete(0,END)
-        self.rho_entry.delete(0,END) # Limpa o novo campo de resistividade
+        self.rho_entry.delete(0,END)
         self.xa_entry.delete(0,END)
         self.xb_entry.delete(0,END)
         self.xc_entry.delete(0,END)
         self.ha_entry.delete(0,END)
         self.hb_entry.delete(0,END)
         self.hc_entry.delete(0,END)
+        self.l_entry.delete(0,END) 
+
+        self.ra_entry.insert(0, self._default_values['ra'])
+        self.rb_entry.insert(0, self._default_values['rb'])
+        self.rc_entry.insert(0, self._default_values['rc'])
+        self.r_entry.insert(0, self._default_values['R'])
+        self.rmg_entry.insert(0, self._default_values['Rmg'])
+        self.rho_entry.insert(0, self._default_values['rho'])
+        self.xa_entry.insert(0, self._default_values['xa'])
+        self.xb_entry.insert(0, self._default_values['xb'])
+        self.xc_entry.insert(0, self._default_values['xc'])
+        self.ha_entry.insert(0, self._default_values['ha'])
+        self.hb_entry.insert(0, self._default_values['hb'])
+        self.hc_entry.insert(0, self._default_values['hc'])
+        self.l_entry.insert(0, self._default_values['l'])
+        
         self._insert_data_to_treeview(np.full((3, 3), np.nan, dtype=complex))
 
     def _get_input_values(self):
         try:
-            # Resistências do condutor em Ohms/km (assumindo input do usuário)
+            # Resistências do condutor em Ohms/km (input do usuário)
             ra_km = float(self.ra_entry.get()) if self.ra_entry.get() else 0.0
             rb_km = float(self.rb_entry.get()) if self.rb_entry.get() else 0.0
             rc_km = float(self.rc_entry.get()) if self.rc_entry.get() else 0.0
 
-            # Convertendo para Ohms/metro, pois a função `Metodo_Carson_long` espera Ohms/metro
+            # Convertendo para Ohms/metro, pois a função `Metodo_Carson_long` espera Ohms/metro para Ra, Rb, Rc
             ra = ra_km / 1000.0
             rb = rb_km / 1000.0
             rc = rc_km / 1000.0
@@ -448,7 +501,6 @@ class CarsonLongitudinalCalculator:
             R_val = float(self.r_entry.get()) if self.r_entry.get() else None
             Rmg_val = float(self.rmg_entry.get()) if self.rmg_entry.get() else None
             
-            # NOVO: Obtém e converte a resistividade do solo
             rho = float(self.rho_entry.get()) if self.rho_entry.get() else 0.0
             
             xa = float(self.xa_entry.get()) if self.xa_entry.get() else 0.0
@@ -459,13 +511,17 @@ class CarsonLongitudinalCalculator:
             hb = float(self.hb_entry.get()) if self.hb_entry.get() else 0.0
             hc = float(self.hc_entry.get()) if self.hc_entry.get() else 0.0
             
+            # Comprimento da linha em quilômetros (input do usuário)
+            l_km = float(self.l_entry.get()) if self.l_entry.get() else 0.0
+            
             return {
-                'ra': ra, 'rb': rb, 'rc': rc,
+                'ra': ra, 'rb': rb, 'rc': rc, # Estes são em Ohms/metro agora
                 'xa': xa, 'ha': ha,
                 'xb': xb, 'hb': hb,
                 'xc': xc, 'hc': hc,
-                'R': R_val, 'Rmg_val': Rmg_val,
-                'rho': rho # Adicionado o novo parâmetro
+                'rho': rho,
+                'l_km': l_km, # Retornando 'l' em KM para uso direto no cálculo final
+                'R': R_val, 'Rmg_val': Rmg_val
             }
         except ValueError as e:
             messagebox.showerror("Erro de Entrada", f"Por favor, insira valores numéricos válidos. Detalhes: {e}")
@@ -477,17 +533,27 @@ class CarsonLongitudinalCalculator:
             return
 
         try:
-            # CHAMA A FUNÇÃO ESPECÍFICA DO MÉTODO DE CARSON, AGORA PASSANDO 'rho'
-            Z_matrix = Metodo_Carson_long(
+            # CHAMA A FUNÇÃO Metodo_Carson_long
+            # A função Metodo_Carson_long agora retorna a impedância por Ohms/km
+            Z_matrix_per_km = Metodo_Carson_long(
                 ra=params['ra'], rb=params['rb'], rc=params['rc'],
                 xa=params['xa'], ha=params['ha'],
                 xb=params['xb'], hb=params['hb'],
                 xc=params['xc'], hc=params['hc'],
-                rho=params['rho'], # Passando a resistividade do solo
+                rho=params['rho'],
+                # Não passamos 'l' para Metodo_Carson_long, pois ela calcula Ohms/km
                 R=params['R'], Rmg_val=params['Rmg_val']
             )
-            self._insert_data_to_treeview(Z_matrix)
-            messagebox.showinfo("Cálculo Concluído", "A matriz de impedância foi calculada e exibida na tabela.")
+            
+            # Recupera o comprimento da linha em KM
+            l_km = params['l_km']
+
+            # Calcula a impedância TOTAL da linha (em Ohms)
+            # Z_total = Z_por_km * comprimento_em_km
+            Z_final_total_ohms = Z_matrix_per_km * l_km
+            
+            self._insert_data_to_treeview(Z_final_total_ohms)
+            messagebox.showinfo("Cálculo Concluído", "A matriz de impedância total da linha foi calculada e exibida na tabela (Ohms).")
         except ValueError as e:
             messagebox.showerror("Erro de Cálculo", f"Ocorreu um erro durante o cálculo: {e}")
         except Exception as e:
@@ -497,15 +563,17 @@ class CarsonLongitudinalCalculator:
         for i in self.lista_CAP.get_children():
             self.lista_CAP.delete(i)
         
-        complex_format = "({:.6f} + j{:.6f})" # Formato para exibir números complexos com 6 casas decimais
+        # Formato para exibir números complexos com 6 casas decimais
+        complex_format = "({:.6f} + j{:.6f})" 
         row_labels = ["A", "B", "C"]
 
         for i, row_label in enumerate(row_labels):
             row_values = []
             for j in range(Z_matrix.shape[1]):
                 complex_num = Z_matrix[i, j]
+                # Verifica se é NaN para exibir vazio, caso contrário formata
                 if np.isnan(complex_num.real) and np.isnan(complex_num.imag):
-                    formatted_value = "" # Exibe vazio se for NaN
+                    formatted_value = "" 
                 else:
                     formatted_value = complex_format.format(complex_num.real, complex_num.imag)
                 row_values.append(formatted_value)
@@ -2943,9 +3011,9 @@ class AppMain:
         elif selected_method == "Longitudinal Imagem":
             self.root.withdraw() # Esconde a janela principal
             LongitudinalImageCalculator(self.root) # Passa a referência da janela principal
-        #elif selected_method == "Longitudinal Carson (Correção)": # Nova condição para o método de Carson
-        #    self.root.withdraw() # Esconde a janela principal
-        #    CarsonLongitudinalCalculator(self.root) # Instancia a nova janela de Carson
+        elif selected_method == "Longitudinal Carson (Correção)":
+            self.root.withdraw() # Esconde a janela principal
+            CarsonLongitudinalCalculator(self.root) # Instancia a nova janela de Carson com correção
         #elif selected_method == "Longitudinal Carson para-raio": # Nova condição para o método de Carson
         #    self.root.withdraw() # Esconde a janela principal
         #    CarsonGroundWireCalculator(self.root) # Instancia a nova janela de Carson
