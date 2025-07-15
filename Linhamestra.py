@@ -32,18 +32,41 @@ from Transversais.transposicao import metodo_transposicao_tran
 from Transversais.feixe_condutor import metodo_feixe_condutor_tran
 from Transversais.capacitancia_de_sequencia import metodo_capacitancia_sequencia_tran
 
-# Classes de Janelas da Interface Gráfica
+import numpy as np
+from tkinter import Toplevel, Frame, Button, Label, Entry, END, CENTER, messagebox, Scrollbar # Importar Tkinter corretamente
+from tkinter import ttk # Para Treeview
+
+# Assumindo que 'metodo_imagem_long' está disponível (do seu módulo ou definido em outro lugar)
+# from longitudinais.imagem import metodo_imagem_long
 
 # --- Classe para a Tela de Cálculo do Método das Imagens Longitudinais ---
 class LongitudinalImageCalculator:
     def __init__(self, master_window):
         self.master_window = master_window
         self.calc_window = Toplevel(master_window)
+        
+        # --- Novos: Valores padrão para os campos de entrada ---
+        self._default_values = {
+            'ra': 0.1,    # Ohm/km
+            'rb': 0.1,    # Ohm/km
+            'rc': 0.1,    # Ohm/km
+            'R': 0.01,    # m
+            'Rmg': '',    # Pode deixar vazio se R for o padrão
+            'xa': 0.0,    # m
+            'xb': 3.0,    # m
+            'xc': 6.0,    # m
+            'ha': 15.0,   # m
+            'hb': 15.0,   # m
+            'hc': 15.0,   # m
+            'l': 10.0     # km
+        }
+
         self._setup_window()
         self._setup_frames()
         self._setup_widgets()
         self._setup_treeview()
         
+        # Inicializa a Treeview com NaNs, como antes
         self._insert_data_to_treeview(np.full((3, 3), np.nan, dtype=complex))
 
     def _setup_window(self):
@@ -67,15 +90,15 @@ class LongitudinalImageCalculator:
     def _setup_widgets(self):
         # --- Botões ---
         self.botao_return = Button(self.frame_info, text='Retornar', bd=4,
-                                    font=('Arial',10), command=self._on_closing)
+                                   font=('Arial',10), command=self._on_closing)
         self.botao_return.place(relx=.01, rely=.01, relwidth=0.15, relheight=0.1)
 
         self.botao_limpar = Button(self.frame_info, text='Limpar', bd=4,
-                                    font=('Arial',10), command=self._clear_inputs)
+                                   font=('Arial',10), command=self._clear_inputs)
         self.botao_limpar.place(relx=.80, rely=.01, relwidth=0.15, relheight=0.1)
 
         self.botao_calc = Button(self.frame_info, text='Calcular', bd=4,
-                                   font=('Arial',10), command=self._calculate_impedance)
+                                  font=('Arial',10), command=self._calculate_impedance)
         self.botao_calc.place(relx=.8, rely=.85, relwidth=0.15, relheight=0.1)
 
         # --- Labels e Entradas de Resistências ---
@@ -84,23 +107,28 @@ class LongitudinalImageCalculator:
         Label(self.frame_info, text='Ra:', bg='#BEBEBE').place(relx=0.01, rely=.32)
         self.ra_entry = Entry(self.frame_info)
         self.ra_entry.place(relx=.1, rely=.32, relwidth=0.08)
+        self.ra_entry.insert(0, self._default_values['ra']) # Default Value
 
         Label(self.frame_info, text='Rb:', bg='#BEBEBE').place(relx=0.01, rely=.44)
         self.rb_entry = Entry(self.frame_info)
         self.rb_entry.place(relx=.1, rely=.44, relwidth=0.08)
+        self.rb_entry.insert(0, self._default_values['rb']) # Default Value
 
         Label(self.frame_info, text='Rc:', bg='#BEBEBE').place(relx=0.01, rely=.56)
         self.rc_entry = Entry(self.frame_info)
         self.rc_entry.place(relx=.1, rely=.56, relwidth=0.08)
+        self.rc_entry.insert(0, self._default_values['rc']) # Default Value
 
         # --- Labels e Entradas de Raio e RMG ---
         Label(self.frame_info, text='Raio Condutor (R) [m]', bg='#BEBEBE').place(relx=0.01, rely=.68)
         self.r_entry = Entry(self.frame_info)
         self.r_entry.place(relx=.2, rely=.68, relwidth=0.08)
+        self.r_entry.insert(0, self._default_values['R']) # Default Value
 
         Label(self.frame_info, text='OU RMG [m]', bg='#BEBEBE').place(relx=0.01, rely=.80)
         self.rmg_entry = Entry(self.frame_info)
         self.rmg_entry.place(relx=.2, rely=.80, relwidth=0.08)
+        self.rmg_entry.insert(0, self._default_values['Rmg']) # Default Value (vazio, pois R é o padrão)
 
         # --- Labels e Entradas de Coordenadas ---
         Label(self.frame_info, text='Coordenadas dos Cabos (m)', bg='#BEBEBE').place(relx=.4, rely=.2)
@@ -108,34 +136,41 @@ class LongitudinalImageCalculator:
         Label(self.frame_info, text='Xa:', bg='#BEBEBE').place(relx=.4, rely=.32)
         self.xa_entry = Entry(self.frame_info)
         self.xa_entry.place(relx=.48, rely=.32, relwidth=0.08)
+        self.xa_entry.insert(0, self._default_values['xa']) # Default Value
 
         Label(self.frame_info, text='Xb:', bg='#BEBEBE').place(relx=.4, rely=.44)
         self.xb_entry = Entry(self.frame_info)
         self.xb_entry.place(relx=.48, rely=.44, relwidth=0.08)
+        self.xb_entry.insert(0, self._default_values['xb']) # Default Value
 
         Label(self.frame_info, text='Xc:', bg='#BEBEBE').place(relx=.4, rely=.56)
         self.xc_entry = Entry(self.frame_info)
         self.xc_entry.place(relx=.48, rely=.56, relwidth=0.08)
+        self.xc_entry.insert(0, self._default_values['xc']) # Default Value
 
         Label(self.frame_info, text='Ha:', bg='#BEBEBE').place(relx=.6, rely=.32)
         self.ha_entry = Entry(self.frame_info)
         self.ha_entry.place(relx=.68, rely=.32, relwidth=0.08)
+        self.ha_entry.insert(0, self._default_values['ha']) # Default Value
 
         Label(self.frame_info, text='Hb:', bg='#BEBEBE').place(relx=.6, rely=.44)
         self.hb_entry = Entry(self.frame_info)
         self.hb_entry.place(relx=.68, rely=.44, relwidth=0.08)
+        self.hb_entry.insert(0, self._default_values['hb']) # Default Value
 
         Label(self.frame_info, text='Hc:', bg='#BEBEBE').place(relx=.6, rely=.56)
         self.hc_entry = Entry(self.frame_info)
         self.hc_entry.place(relx=.68, rely=.56, relwidth=0.08)
+        self.hc_entry.insert(0, self._default_values['hc']) # Default Value
 
         Label(self.frame_info, text='Comp. da Linha (l) [km]:', bg='#BEBEBE').place(relx=.4, rely=.68)
         self.l_entry = Entry(self.frame_info)
         self.l_entry.place(relx=.68, rely=.68, relwidth=0.08)
+        self.l_entry.insert(0, self._default_values['l']) # Default Value
 
     def _setup_treeview(self):
         self.lista_CAP = ttk.Treeview(self.frame_result, height=3,
-                                           columns=('col1','col2','col3'))
+                                         columns=('col1','col2','col3'))
         self.lista_CAP.heading("#0", text="")
         self.lista_CAP.heading("col1", text="Condutor A")
         self.lista_CAP.heading("col2", text="Condutor B")
@@ -153,6 +188,7 @@ class LongitudinalImageCalculator:
         self.scrollLista.place(relx=0.96, rely=0.1, relwidth=0.02, relheight=0.85)
 
     def _clear_inputs(self):
+        # Limpa os campos e insere os valores padrão novamente
         self.ra_entry.delete(0,END)
         self.rb_entry.delete(0,END)
         self.rc_entry.delete(0,END)
@@ -165,6 +201,20 @@ class LongitudinalImageCalculator:
         self.hb_entry.delete(0,END)
         self.hc_entry.delete(0,END)
         self.l_entry.delete(0,END)
+
+        self.ra_entry.insert(0, self._default_values['ra'])
+        self.rb_entry.insert(0, self._default_values['rb'])
+        self.rc_entry.insert(0, self._default_values['rc'])
+        self.r_entry.insert(0, self._default_values['R'])
+        self.rmg_entry.insert(0, self._default_values['Rmg'])
+        self.xa_entry.insert(0, self._default_values['xa'])
+        self.xb_entry.insert(0, self._default_values['xb'])
+        self.xc_entry.insert(0, self._default_values['xc'])
+        self.ha_entry.insert(0, self._default_values['ha'])
+        self.hb_entry.insert(0, self._default_values['hb'])
+        self.hc_entry.insert(0, self._default_values['hc'])
+        self.l_entry.insert(0, self._default_values['l'])
+        
         self._insert_data_to_treeview(np.full((3, 3), np.nan, dtype=complex))
 
     def _get_input_values(self):
@@ -213,6 +263,7 @@ class LongitudinalImageCalculator:
             return
 
         try:
+            # Certifique-se que 'metodo_imagem_long' está importado ou acessível no seu projeto
             Z_matrix = metodo_imagem_long( # Chama a função específica para "Longitudinal Imagem"
                 ra=params['ra'], rb=params['rb'], rc=params['rc'],
                 xa=params['xa'], ha=params['ha'],
@@ -239,8 +290,9 @@ class LongitudinalImageCalculator:
             row_values = []
             for j in range(Z_matrix.shape[1]):
                 complex_num = Z_matrix[i, j]
+                # Verifica se o número é NaN para exibir vazio
                 if np.isnan(complex_num.real) and np.isnan(complex_num.imag):
-                    formatted_value = "" # Exibe vazio se for NaN
+                    formatted_value = ""
                 else:
                     formatted_value = complex_format.format(complex_num.real, complex_num.imag)
                 row_values.append(formatted_value)
