@@ -1,6 +1,6 @@
-ESCRITO EM 14/07/25
+ESCRITO EM 15/07/25
 ---
-PARA 15/07/25
+PARA 16/07/25
 ---
 Subir github:
 
@@ -10,7 +10,6 @@ Afazeres:
 	- Testes
 		- Revisar todos os métodos:
 			- Longitudinais
-				- Carson com correção
 				- Carson com para-raio
 				- Transposição
 				- Feixe de condutores
@@ -43,7 +42,6 @@ Afazeres:
 		
 		- Re-implementar no front-end.
 			- Longitudinais
-				- Carson com correção
 				- Carson com para-raio
 				- Transposição
 				- Feixe de condutores
@@ -54,7 +52,6 @@ Afazeres:
 
 		- Testar janela por janela:
 			- Longitudinais
-				- Carson com correção
 				- Carson com para-raio
 				- Transposição
 				- Feixe de condutores
@@ -65,8 +62,6 @@ Afazeres:
 
 		- Criar default teste todas as janelas:
 			- Longitudinais
-				- Imagem
-				- Carson com correção
 				- Carson com para-raio
 				- Transposição
 				- Feixe de condutores
