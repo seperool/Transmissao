@@ -393,7 +393,7 @@ class CarsonLongitudinalCalculator:
         # --- Labels e Entradas de Resistividade do Solo ---
         Label(self.frame_info, text='Resistividade do Solo (ρ) [Ohm-m]', bg='#BEBEBE').place(relx=0.4, rely=.1)
         self.rho_entry = Entry(self.frame_info)
-        self.rho_entry.place(relx=.68, rely=.1, relwidth=0.08) # Alinhado com as coordenadas X
+        self.rho_entry.place(relx=.7, rely=.1, relwidth=0.08) # Alinhado com as coordenadas X
         self.rho_entry.insert(0, self._default_values['rho']) # Default Value
 
         # --- Labels e Entradas de Coordenadas ---
@@ -414,25 +414,25 @@ class CarsonLongitudinalCalculator:
         self.xc_entry.place(relx=.48, rely=.56, relwidth=0.08)
         self.xc_entry.insert(0, self._default_values['xc']) # Default Value
 
-        Label(self.frame_info, text='Ha:', bg='#BEBEBE').place(relx=.6, rely=.32)
+        Label(self.frame_info, text='Ha:', bg='#BEBEBE').place(relx=.62, rely=.32)
         self.ha_entry = Entry(self.frame_info)
-        self.ha_entry.place(relx=.68, rely=.32, relwidth=0.08)
+        self.ha_entry.place(relx=.7, rely=.32, relwidth=0.08)
         self.ha_entry.insert(0, self._default_values['ha']) # Default Value
 
-        Label(self.frame_info, text='Hb:', bg='#BEBEBE').place(relx=.6, rely=.44)
+        Label(self.frame_info, text='Hb:', bg='#BEBEBE').place(relx=.62, rely=.44)
         self.hb_entry = Entry(self.frame_info)
-        self.hb_entry.place(relx=.68, rely=.44, relwidth=0.08)
+        self.hb_entry.place(relx=.7, rely=.44, relwidth=0.08)
         self.hb_entry.insert(0, self._default_values['hb']) # Default Value
 
-        Label(self.frame_info, text='Hc:', bg='#BEBEBE').place(relx=.6, rely=.56)
+        Label(self.frame_info, text='Hc:', bg='#BEBEBE').place(relx=.62, rely=.56)
         self.hc_entry = Entry(self.frame_info)
-        self.hc_entry.place(relx=.68, rely=.56, relwidth=0.08)
+        self.hc_entry.place(relx=.7, rely=.56, relwidth=0.08)
         self.hc_entry.insert(0, self._default_values['hc']) # Default Value
 
         # --- Labels e Entradas de Comprimento da Linha ---
         Label(self.frame_info, text='Comp. da Linha (l) [km]:', bg='#BEBEBE').place(relx=.4, rely=.68)
         self.l_entry = Entry(self.frame_info)
-        self.l_entry.place(relx=.68, rely=.68, relwidth=0.08)
+        self.l_entry.place(relx=.7, rely=.68, relwidth=0.08)
         self.l_entry.insert(0, self._default_values['l']) # Default Value
 
     def _setup_treeview(self):
