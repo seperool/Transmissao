@@ -6,9 +6,18 @@ def Metodo_Carson_long(ra, rb, rc, xa, xb, xc, ha, hb, hc, rho, R=None, Rmg_val=
     Método de Carson com correção para cálculo de impedâncias longitudinais
     em linhas de transmissão trifásicas, sem cabo para-raio.
 
+    Esta função calcula a matriz de impedância por unidade de comprimento
+    (Ohms/km) da linha, considerando os efeitos do solo via correção de Carson.
+    O comprimento total da linha ('l') NÃO é um parâmetro desta função,
+    pois a impedância por unidade de comprimento é uma propriedade intrínseca
+    da configuração da linha e do solo, independente do seu comprimento total.
+    A impedância total da linha (em Ohms) deve ser calculada separadamente,
+    multiplicando a matriz de impedância por km pelo comprimento ('l' em km)
+    na camada da interface ou aplicação que a invoca.
+
     Parâmetros:
     ra, rb, rc (float): Resistência ôhmica por unidade de comprimento dos condutores A, B, C (Ohms/metro).
-                        É crucial que estas resistências estejam em Ohms por metro para consistência com as constantes.
+                        É crucial que estas resistências estejam em Ohms por metro para consistência com as constantes físicas.
     xa, xb, xc (float): Coordenadas horizontais (X) dos condutores A, B, C (metros).
     ha, hb, hc (float): Coordenadas verticais (altura H) dos condutores A, B, C (metros).
     rho (float): Resistividade do solo (Ohms-metro). Variável de entrada crucial para a correção de Carson.
@@ -24,20 +33,21 @@ def Metodo_Carson_long(ra, rb, rc, xa, xb, xc, ha, hb, hc, rho, R=None, Rmg_val=
     """
 
     # --- Constantes Físicas e Elétricas ---
-    f = 60                                          # Frequência do sistema (Hz). Padrão no Brasil e em outras regiões.
-    mi_0 = 4 * math.pi * (10**(-7))                 # Permeabilidade magnética do vácuo (H/m). Constante física fundamental.
-    w = 2 * math.pi * f                             # Frequência angular (rad/s). Usada nos cálculos de reatância indutiva.
+    f = 60                                     # Frequência do sistema (Hz). Padrão no Brasil e em outras regiões.
+    mi_0 = 4 * math.pi * (10**(-7))            # Permeabilidade magnética do vácuo (H/m). Constante física fundamental.
+    w = 2 * math.pi * f                        # Frequência angular (rad/s). Usada nos cálculos de reatância indutiva.
 
     # --- Termos de Correção do Método de Carson para o Solo ---
     # rd: Termo de resistência de Carson (Ohms/m) que representa a parcela de resistência adicionada
     # devido ao retorno da corrente pelo solo com resistividade finita. É um termo constante.
-    rd = 9.869 * (10**(-7)) * f                     # Ohms/m. Esta é uma aproximação amplamente usada para 50/60 Hz.
+    # Esta é uma aproximação amplamente usada para 50/60 Hz.
+    rd = 9.869 * (10**(-7)) * f                # Ohms/m. 
 
     # De: Distância de retorno equivalente do solo (metros).
     # É uma profundidade fictícia do plano de retorno da corrente no solo,
     # que encapsula o efeito da resistividade finita do solo.
     # A constante 659 é apropriada para rho em Ohm-m e f em Hz, resultando em De em metros.
-    De = 659 * (math.sqrt(rho / f))                 # Metros
+    De = 659 * (math.sqrt(rho / f))            # Metros
 
     # --- Cálculo do Raio Médio Geométrico (RMG) ---
     Rmg = None # Inicializa RMG como None para verificar se foi calculado ou fornecido
@@ -67,8 +77,8 @@ def Metodo_Carson_long(ra, rb, rc, xa, xb, xc, ha, hb, hc, rho, R=None, Rmg_val=
     dac = np.sqrt(((xa - xc)**2) + ((ha - hc)**2)) # Distância entre condutores A e C
     dbc = np.sqrt(((xb - xc)**2) + ((hb - hc)**2)) # Distância entre condutores B e C
 
-    # --- Cálculo das Impedâncias Próprias e Mútuas (por metro) ---
-    # As fórmulas de Carson geralmente resultam em impedâncias por metro.
+    # --- Cálculo das Impedâncias Próprias e Mútuas (em Ohms/metro) ---
+    # As fórmulas de Carson resultam em impedâncias por metro.
     # Impedâncias Próprias (Zii): Representam a impedância de um condutor em relação ao retorno pelo solo.
     # Zii = Ri_condutor + R_terra_Carson + j * X_terra_propria_Carson
     # R_terra_Carson é o termo 'rd'. X_terra_propria_Carson é a parte logarítmica com De/RMG.
@@ -89,15 +99,13 @@ def Metodo_Carson_long(ra, rb, rc, xa, xb, xc, ha, hb, hc, rho, R=None, Rmg_val=
     Zca = Zac
     Zcb = Zbc
 
-    # --- Construção da Matriz de Impedância ---
-    # Monta a matriz 3x3 de impedâncias de fase.
-    # Cada elemento [i, j] da matriz representa a impedância entre a fase i e a fase j.
-    # Multiplica a matriz inteira por 1000 para converter de Ohms/metro para Ohms/km,
-    # já que as resistências de entrada são geralmente fornecidas em Ohms/km.
+    # --- Construção da Matriz de Impedância (Ohms/metro) e Conversão para Ohms/km ---
+    # Monta a matriz 3x3 de impedâncias de fase em Ohms/metro.
+    # Em seguida, a matriz inteira é multiplicada por 1000 para converter para Ohms/km.
     Z = np.array([
         [Zaa, Zab, Zac],
         [Zba, Zbb, Zbc],
         [Zca, Zcb, Zcc]
-    ]) * 1000 # Converter para Ohms/km
+    ]) * 1000 # 'Z' agora representa a matriz de impedância longitudinal em Ohms/km
 
-    return Z # Retorna a matriz de impedância longitudinal da linha
+    return Z # Retorna a matriz de impedância longitudinal da linha em Ohms/km
