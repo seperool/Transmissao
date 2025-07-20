@@ -1,8 +1,9 @@
 import unittest
 import numpy as np
+from numpy.linalg import inv
 import math
 
-def metodo_carson_para_raio(ra, rb, rc, rp, xa, xb, xc, xp, ha, hb, hc, hp, rho, l, R=None, Rmg_val=None):
+def metodo_carson_para_raio(ra, rb, rc, rp, xa, xb, xc, xp, ha, hb, hc, hp, rho, R=None, Rmg_val=None):
     """
     Calcula a impedância longitudinal de uma linha de transmissão trifásica com cabo para-raios,
     usando o Método de Carson e a redução de Kron.
@@ -49,7 +50,7 @@ def metodo_carson_para_raio(ra, rb, rc, rp, xa, xb, xc, xp, ha, hb, hc, hp, rho,
     # --- Cálculo das Distâncias Geométricas ---
     # Distâncias euclidianas 2D entre condutores reais.
     dab = np.sqrt(((xa - xb)**2) + ((ha - hb)**2))
-    dac = np.sqrt(((xa - hc)**2) + ((ha - hc)**2))
+    dac = np.sqrt(((xa - xc)**2) + ((ha - hc)**2))
     dbc = np.sqrt(((xb - xc)**2) + ((hb - hc)**2))
     dap = np.sqrt(((xa - xp)**2) + ((ha - hp)**2))
     dbp = np.sqrt(((xb - xp)**2) + ((hb - hp)**2))
@@ -86,12 +87,17 @@ def metodo_carson_para_raio(ra, rb, rc, rp, xa, xb, xc, xp, ha, hb, hc, hp, rho,
 
     # --- Redução de Kron para Eliminação do Para-Raios ---
     # Fórmula: Z_reduzida = Z_1 - (Z_2 @ inv(Z_4) @ Z_3)
-    # inv(Z_4) é 1/Z_4[0,0] para matriz 1x1.
-    termo_correcao = np.dot(Z_2, Z_3) / Z_4[0,0]
+    
+    # Prevenção de divisão por zero ou número muito pequeno na inversão
+    # Embora np.linalg.inv levante um LinAlgError, esta verificação oferece uma mensagem mais clara.
+    if abs(Z_4[0,0]) < 1e-15: # Usar uma tolerância adequada para números de ponto flutuante
+        raise ValueError("Impedância própria do para-raios (Zpp) é zero ou muito pequena, impossível realizar redução de Kron.")
 
-    Zp = Z_1 - termo_correcao # Matriz de impedância de fase final.
+    # A multiplicação de matrizes com '@' é mais explícita e pythonica
+    Zp = Z_1 - (Z_2 @ inv(Z_4) @ Z_3) # Matriz de impedância de fase final.
 
-    return Zp*l
+    # Converter para Ohms/km, que é a unidade padrão na maioria das aplicações
+    return Zp * 1000
 
 ### Classe de Teste `TestMetodoCarsonParaRaio` (Com a Correção)
 
