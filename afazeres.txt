@@ -1,12 +1,16 @@
-ESCRITO EM 19/07/25
+ESCRITO EM 20/07/25
 ---
-PARA 20/07/25
+PARA 21/07/25
 ---
 Subir github:
 
-Estudar:
+Doing:
 
-Afazeres:
+- Criar teste unitário para todas as funções:
+	- Longitudinais
+		- Carson com correção <-
+
+To do:
 	- Testes
 		- Revisar todos os métodos:
 			- Longitudinais
@@ -19,8 +23,6 @@ Afazeres:
 		
 		- Criar teste unitário para todas as funções:
 			- Longitudinais
-				- Carson com correção
-				- Carson com para-raio <-
 				- Transposição
 				- Feixe de condutores
 				- sintese
