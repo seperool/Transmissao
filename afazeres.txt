@@ -1,6 +1,6 @@
-ESCRITO EM 18/07/25
+ESCRITO EM 19/07/25
 ---
-PARA 19/07/25
+PARA 20/07/25
 ---
 Subir github:
 
@@ -10,7 +10,6 @@ Afazeres:
 	- Testes
 		- Revisar todos os métodos:
 			- Longitudinais
-				- Carson com para-raio
 				- Transposição
 				- Feixe de condutores
 				- sintese
@@ -42,7 +41,6 @@ Afazeres:
 		
 		- Re-implementar no front-end.
 			- Longitudinais
-				- Carson com para-raio
 				- Transposição
 				- Feixe de condutores
 				- sintese
