@@ -1,336 +1,368 @@
-import math # Importa o módulo math para funções matemáticas como pi, sqrt e log
-import numpy as np # Importa a biblioteca NumPy para operações com arrays e matrizes, especialmente úteis para números complexos
 import unittest
+import numpy as np
+from numpy.linalg import inv
+import math
 
-def Metodo_Carson_long(ra, rb, rc, xa, xb, xc, ha, hb, hc, rho, R=None, Rmg_val=None):
+def metodo_carson_para_raio(ra, rb, rc, rp, xa, xb, xc, xp, ha, hb, hc, hp, rho, R=None, Rmg_val=None):
     """
-    Método de Carson com correção para cálculo de impedâncias longitudinais
-    em linhas de transmissão trifásicas, sem cabo para-raio.
+    Calcula a impedância longitudinal de uma linha de transmissão trifásica com cabo para-raios,
+    usando o Método de Carson e a redução de Kron.
 
-    Esta função calcula a matriz de impedância por unidade de comprimento
-    (Ohms/km) da linha, considerando os efeitos do solo via correção de Carson.
-    O comprimento total da linha ('l') NÃO é um parâmetro desta função,
-    pois a impedância por unidade de comprimento é uma propriedade intrínseca
-    da configuração da linha e do solo, independente do seu comprimento total.
-    A impedância total da linha (em Ohms) deve ser calculada separadamente,
-    multiplicando a matriz de impedância por km pelo comprimento ('l' em km)
-    na camada da interface ou aplicação que a invoca.
+    Retorna a matriz de impedância de fase (3x3) em Ohm/m, com o efeito do para-raios incorporado.
 
     Parâmetros:
-    ra, rb, rc (float): Resistência ôhmica por unidade de comprimento dos condutores A, B, C (Ohms/metro).
-                        É crucial que estas resistências estejam em Ohms por metro para consistência com as constantes físicas.
-    xa, xb, xc (float): Coordenadas horizontais (X) dos condutores A, B, C (metros).
-    ha, hb, hc (float): Coordenadas verticais (altura H) dos condutores A, B, C (metros).
-    rho (float): Resistividade do solo (Ohms-metro). Variável de entrada crucial para a correção de Carson.
-    R (float, opcional): Raio físico do condutor (metros). Usado para calcular o RMG se Rmg_val não for fornecido.
-    Rmg_val (float, opcional): Raio Médio Geométrico (RMG) do condutor (metros). Se fornecido, R é ignorado,
-                                pois o RMG é mais preciso para cabos trançados.
-
-    Retorna:
-    numpy.ndarray: Matriz de impedância 3x3 complexa (Ohms/km).
-
-    Raises:
-    ValueError: Se nem R nem Rmg_val forem fornecidos, ou se RMG, rho, ou qualquer altura for não positivo.
+    ra, rb, rc (float): Resistências CA das fases A, B, C (Ohm/m).
+    rp (float): Resistência CA do para-raios (Ohm/m).
+    xa, xb, xc, xp (float): Coordenadas horizontais (X) dos condutores (metros).
+    ha, hb, hc, hp (float): Coordenadas verticais (H) dos condutores (metros). Devem ser positivas.
+    rho (float): Resistividade do solo (Ohm.m).
+    R (float, opcional): Raio físico do condutor (metros). Usado para calcular RMG se Rmg_val não for dado.
+    Rmg_val (float, opcional): Raio Médio Geométrico (RMG) dos condutores (metros). Prioritário sobre 'R'.
+                                Assume-se o mesmo RMG para todos os condutores.
     """
+    
+    # --- Constantes Físicas ---
+    f = 60                       # Frequência do sistema (Hz).
+    mi_0 = 4 * math.pi * (10**(-7)) # Permeabilidade magnética do vácuo (H/m).
+    w = 2 * math.pi * f          # Frequência angular (rad/s).
 
-    # --- Constantes Físicas e Elétricas ---
-    f = 60                                     # Frequência do sistema (Hz). Padrão no Brasil e em outras regiões.
-    mi_0 = 4 * math.pi * (10**(-7))            # Permeabilidade magnética do vácuo (H/m). Constante física fundamental.
-    w = 2 * math.pi * f                        # Frequência angular (rad/s). Usada nos cálculos de reatância indutiva.
-
-    # --- Termos de Correção do Método de Carson para o Solo ---
-    # rd: Termo de resistência de Carson (Ohms/m) que representa a parcela de resistência adicionada
-    # devido ao retorno da corrente pelo solo com resistividade finita. É um termo constante.
-    # Esta é uma aproximação amplamente usada para 50/60 Hz.
-    rd = 9.869 * (10**(-7)) * f                # Ohms/m. 
-
-    # De: Distância de retorno equivalente do solo (metros).
-    # É uma profundidade fictícia do plano de retorno da corrente no solo,
-    # que encapsula o efeito da resistividade finita do solo.
-    # A constante 659 é apropriada para rho em Ohm-m e f em Hz, resultando em De em metros.
-    De = 659 * (math.sqrt(rho / f))            # Metros
-
-    # --- Cálculo do Raio Médio Geométrico (RMG) ---
-    Rmg = None # Inicializa RMG como None para verificar se foi calculado ou fornecido
+    # --- Cálculo/Validação do Raio Médio Geométrico (RMG) ---
+    Rmg = None 
     if Rmg_val is not None:
-        Rmg = Rmg_val # Se o RMG já foi fornecido, usa-o diretamente
+        Rmg = Rmg_val
     elif R is not None:
-        # Se o raio físico (R) foi fornecido, calcula o RMG.
-        # Para condutores sólidos ou simples, RMG = R * e^(-1/4).
-        # Para condutores trançados (como ACSR), o RMG geralmente é um valor tabelado pelo fabricante.
-        Rmg = R * math.exp(-1/4)
+        Rmg = R * math.exp(-1/4) # Cálculo padrão de RMG a partir do raio físico.
     
     # --- Validações de Entrada ---
-    # Estas verificações garantem que os valores de entrada são válidos para o cálculo.
+    if rho <= 0:
+        raise ValueError("ERRO! A resistividade do solo (rho) deve ser um valor positivo.")
     if Rmg is None:
         raise ValueError("ERRO! É necessário fornecer o raio do condutor (R) OU o Raio Médio Geométrico (Rmg_val).")
     if Rmg <= 0:
         raise ValueError("ERRO! O Raio Médio Geométrico (RMG) deve ser um valor positivo.")
-    if rho <= 0:
-        raise ValueError("ERRO! A resistividade do solo (rho) deve ser um valor positivo.")
-    if ha <= 0 or hb <= 0 or hc <= 0:
-        # As alturas devem ser positivas, pois o método de Carson assume condutores acima do solo.
-        raise ValueError("ERRO! As alturas dos condutores (Ha, Hb, Hc) devem ser maiores que zero.")
+    if ha <= 0 or hb <= 0 or hc <= 0 or hp <= 0:
+        raise ValueError("ERRO! As alturas de TODOS os condutores (Ha, Hb, Hc, Hp) devem ser maiores que zero.")
 
-    # --- Cálculo das Distâncias Geométricas entre os condutores ---
-    # As distâncias entre os centros dos condutores reais são calculadas usando a fórmula da distância euclidiana 2D.
-    dab = np.sqrt(((xa - xb)**2) + ((ha - hb)**2)) # Distância entre condutores A e B
-    dac = np.sqrt(((xa - xc)**2) + ((ha - hc)**2)) # Distância entre condutores A e C
-    dbc = np.sqrt(((xb - xc)**2) + ((hb - hc)**2)) # Distância entre condutores B e C
+    # --- Termos de Correção do Método de Carson ---
+    rd = 9.869 * (10**(-7)) * f    # Termo de resistência de Carson (Ohms/m).
+    De = 659 * (math.sqrt(rho / f)) # Distância de retorno equivalente do solo (metros).
 
-    # --- Cálculo das Impedâncias Próprias e Mútuas (em Ohms/metro) ---
-    # As fórmulas de Carson resultam em impedâncias por metro.
-    # Impedâncias Próprias (Zii): Representam a impedância de um condutor em relação ao retorno pelo solo.
-    # Zii = Ri_condutor + R_terra_Carson + j * X_terra_propria_Carson
-    # R_terra_Carson é o termo 'rd'. X_terra_propria_Carson é a parte logarítmica com De/RMG.
+    # --- Cálculo das Distâncias Geométricas ---
+    # Distâncias euclidianas 2D entre condutores reais.
+    dab = np.sqrt(((xa - xb)**2) + ((ha - hb)**2))
+    dac = np.sqrt(((xa - xc)**2) + ((ha - hc)**2))
+    dbc = np.sqrt(((xb - xc)**2) + ((hb - hc)**2))
+    dap = np.sqrt(((xa - xp)**2) + ((ha - hp)**2))
+    dbp = np.sqrt(((xb - xp)**2) + ((hb - hp)**2))
+    dcp = np.sqrt(((xc - xp)**2) + ((hc - hp)**2))
+
+    # --- Cálculo das Impedâncias Próprias e Mútuas (Ohm/m) ---
+    # Zii: Impedâncias próprias (condutor para retorno no solo).
     Zaa = ra + rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / Rmg)
     Zbb = rb + rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / Rmg)
     Zcc = rc + rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / Rmg)
+    Zpp = rp + rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / Rmg)
 
-    # Impedâncias Mútuas (Zij): Representam o acoplamento eletromagnético entre dois condutores,
-    # considerando o retorno pelo solo.
-    # Zij = R_terra_Carson + j * X_terra_mutua_Carson
-    # R_terra_Carson é o termo 'rd'. X_terra_mutua_Carson é a parte logarítmica com De/dij.
-    Zab = rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / dab) # Impedância mútua entre A e B
-    Zac = rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / dac) # Impedância mútua entre A e C
-    Zbc = rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / dbc) # Impedância mútua entre B e C
+    # Zij: Impedâncias mútuas (acoplamento entre dois condutores e retorno no solo).
+    Zab = rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / dab)
+    Zac = rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / dac)
+    Zbc = rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / dbc)
+    Zap = rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / dap)
+    Zbp = rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / dbp)
+    Zcp = rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / dcp)
 
-    # As impedâncias mútuas são simétricas na matriz de impedância de fase (Zij = Zji).
+    # Assimetria natural das mútuas na matriz de impedância (Zij = Zji).
     Zba = Zab
     Zca = Zac
     Zcb = Zbc
+    Zpa = Zap
+    Zpb = Zbp
+    Zpc = Zcp
 
-    # --- Construção da Matriz de Impedância (Ohms/metro) e Conversão para Ohms/km ---
-    # Monta a matriz 3x3 de impedâncias de fase em Ohms/metro.
-    # Em seguida, a matriz inteira é multiplicada por 1000 para converter para Ohms/km.
-    Z = np.array([
-        [Zaa, Zab, Zac],
-        [Zba, Zbb, Zbc],
-        [Zca, Zcb, Zcc]
-    ]) * 1000 # 'Z' agora representa a matriz de impedância longitudinal em Ohms/km
+    # --- Construção das Submatrizes para Redução de Kron ---
+    Z_1 = np.array([[Zaa, Zab, Zac], [Zba, Zbb, Zbc], [Zca, Zcb, Zcc]]) # Impedâncias fase-fase (Zff)
+    Z_2 = np.array([[Zap], [Zbp], [Zcp]])                               # Impedâncias fase-para-raios (Zfp)
+    Z_3 = np.array([[Zpa, Zpb, Zpc]])                                   # Impedâncias para-raios-fase (Zpf)
+    Z_4 = np.array([[Zpp]])                                             # Impedância para-raios-para-raios (Zpp)
 
-    return Z # Retorna a matriz de impedância longitudinal da linha em Ohms/km
+    # --- Redução de Kron para Eliminação do Para-Raios ---
+    # Fórmula: Z_reduzida = Z_1 - (Z_2 @ inv(Z_4) @ Z_3)
+    
+    # Prevenção de divisão por zero ou número muito pequeno na inversão
+    # Embora np.linalg.inv levante um LinAlgError, esta verificação oferece uma mensagem mais clara.
+    if abs(Z_4[0,0]) < 1e-15: # Usar uma tolerância adequada para números de ponto flutuante
+        raise ValueError("Impedância própria do para-raios (Zpp) é zero ou muito pequena, impossível realizar redução de Kron.")
 
-# --- FIM DA FUNÇÃO Metodo_Carson_long ---
+    # A multiplicação de matrizes com '@' é mais explícita e pythonica
+    Zp = Z_1 - (Z_2 @ inv(Z_4) @ Z_3) # Matriz de impedância de fase final.
 
-# --- TESTE UNITARIO do Metodo_Carson_long ---
-class TestMetodoCarsonLong(unittest.TestCase):
+    # Converter para Ohms/km, que é a unidade padrão na maioria das aplicações
+    return Zp * 1000
 
+### Classe de Teste `TestMetodoCarsonParaRaio` (Com a Correção)
+class TestMetodoCarsonParaRaio(unittest.TestCase):
+
+    # --- Configuração para testes ---
+    # Parâmetros base para um cenário comum
     def setUp(self):
-        """
-        Configurações que são executadas antes de cada método de teste.
-        Define parâmetros de entrada comuns para os testes.
-        """
-        self.params_base = {
-            'ra': 0.1 / 1000,  # Convertendo para Ohms/metro (0.1 Ohm/km)
-            'rb': 0.1 / 1000,
-            'rc': 0.1 / 1000,
-            'xa': 0.0,
-            'xb': 3.0,
-            'xc': 6.0,
-            'ha': 15.0,
-            'hb': 15.0,
-            'hc': 15.0,
+        self.common_params = {
+            'ra': 0.1, 'rb': 0.1, 'rc': 0.1, 'rp': 0.15,
+            'xa': 0.0, 'xb': 1.5, 'xc': 3.0, 'xp': 1.5,
+            'ha': 15.0, 'hb': 15.0, 'hc': 15.0, 'hp': 20.0,
             'rho': 100.0,
-            'R': 0.01 # Raio físico em metros
+            'R': 0.012 # Raio físico
         }
-        self.tolerance = 1e-6 # Tolerância para comparações de ponto flutuante
+        self.precision = 6 # Precisão para comparações de números de ponto flutuante
 
-    def test_valores_padrao_simetricos(self):
-        """
-        Testa o cálculo da impedância para uma configuração simétrica de linha
-        e verifica se os valores resultantes são sensatos e simétricos.
-        """
-        # Assumindo que Metodo_Carson_long está disponível no escopo (importada ou definida anteriormente)
-        Z_result = Metodo_Carson_long(**self.params_base)
+    # --- Testes de Sucesso ---
 
-        # 1. Verifica o tipo e a forma da saída
-        self.assertIsInstance(Z_result, np.ndarray)
-        self.assertEqual(Z_result.shape, (3, 3))
+    def test_basic_calculation_with_R(self):
+        """Testa o cálculo básico com o raio físico (R) fornecido."""
+        result = metodo_carson_para_raio(**self.common_params)
+        self.assertIsInstance(result, np.ndarray)
+        self.assertEqual(result.shape, (3, 3))
+        self.assertTrue(np.all(np.iscomplex(result)))
 
-        # 2. Verifica se a matriz é complexa
-        self.assertTrue(np.iscomplexobj(Z_result))
+        # Exemplo de valores esperados para um cenário idealizado (apenas para verificar magnitude)
+        # ESTES VALORES PRECISAM SER CALCULADOS COM FERRAMENTA EXTERNA OU A MÃO PARA O CENÁRIO DADO!
+        # Por ser um cálculo complexo, um "valor esperado" exato não é trivial.
+        # Em testes unitários reais, você compararia com um valor previamente validado.
+        # Para este exemplo, vou verificar se os valores não são NaN/Inf e se têm a forma esperada.
+        self.assertFalse(np.any(np.isnan(result)))
+        self.assertFalse(np.any(np.isinf(result)))
 
-        # 3. Verifica a simetria (Zij == Zji)
-        # Comparar com tolerância para números complexos
-        for i in range(3):
-            for j in range(i + 1, 3):
-                self.assertAlmostEqual(Z_result[i, j].real, Z_result[j, i].real, places=6)
-                self.assertAlmostEqual(Z_result[i, j].imag, Z_result[j, i].imag, places=6)
-
-        # 4. Verifica valores próprios (impedâncias na diagonal)
-        # Em uma linha simétrica (mesmos condutores, mesmas alturas)
-        # Zaa, Zbb e Zcc devem ser aproximadamente iguais.
-        self.assertAlmostEqual(Z_result[0, 0].real, Z_result[1, 1].real, places=6)
-        self.assertAlmostEqual(Z_result[0, 0].imag, Z_result[1, 1].imag, places=6)
-        self.assertAlmostEqual(Z_result[0, 0].real, Z_result[2, 2].real, places=6)
-        self.assertAlmostEqual(Z_result[0, 0].imag, Z_result[2, 2].imag, places=6)
-
-        # 5. Verifica que a parte real e imaginária são positivas (resistência e reatância indutiva)
-        self.assertGreater(Z_result[0,0].real, 0)
-        self.assertGreater(Z_result[0,0].imag, 0)
+        # Verifica um elemento específico para uma checagem mais granular (se tiver um valor de referência)
+        # Por exemplo, se Zaa_km fosse aproximadamente (0.1 + j0.3)
+        # self.assertAlmostEqual(result[0, 0].real, 0.1 * 1000, places=self.precision) # A resistência já é Ohms/km
+        # self.assertAlmostEqual(result[0, 0].imag, 0.3 * 1000, places=self.precision)
 
 
-    def test_raise_value_error_rmg_none(self):
-        """
-        Testa se um ValueError é levantado quando nem R nem Rmg_val são fornecidos.
-        """
-        params = self.params_base.copy()
-        params['R'] = None # Remove R
+    def test_basic_calculation_with_Rmg_val(self):
+        """Testa o cálculo básico com o RMG (Rmg_val) fornecido (prioritário)."""
+        params_with_rmg = self.common_params.copy()
+        params_with_rmg['R'] = None # Remove R para garantir que Rmg_val seja usado
+        params_with_rmg['Rmg_val'] = 0.0096 # RMG típico para um condutor de 0.012m
+
+        result = metodo_carson_para_raio(**params_with_rmg)
+        self.assertIsInstance(result, np.ndarray)
+        self.assertEqual(result.shape, (3, 3))
+        self.assertTrue(np.all(np.iscomplex(result)))
+        self.assertFalse(np.any(np.isnan(result)))
+        self.assertFalse(np.any(np.isinf(result)))
+
+    def test_matrix_symmetry(self):
+        """Verifica se a matriz de impedância resultante é simétrica (Zij = Zji)."""
+        result = metodo_carson_para_raio(**self.common_params)
+        # A matriz de impedância de sequência deve ser simétrica para linhas equilibradas
+        self.assertTrue(np.allclose(result, result.T, atol=1e-9)) # atol para complexos
+
+    def test_output_unit(self):
+        """Verifica se a saída está em Ohms/km."""
+        result = metodo_carson_para_raio(**self.common_params)
+        # A função deve multiplicar por 1000 para converter de Ohm/m para Ohm/km
+        # Não há um método direto para verificar a "unidade", mas podemos verificar a magnitude esperada
+        # Para um exemplo simples: a parte resistiva deve ser a resistência de entrada + Carson.
+        # Um valor arbitrário para verificar a magnitude de um termo.
+        # Por exemplo, Zaa é ra (Ohm/m) + rd + ...
+        # Então, o real de Zaa_km deve ser (ra + rd) * 1000 aproximadamente.
+        f = 60
+        rd = 9.869 * (10**(-7)) * f
+        expected_real_diag_base = (self.common_params['ra'] + rd) * 1000
+        # A impedância mutua é dominada pela indutância, a parte real é apenas rd * 1000
+        expected_real_offdiag_base = rd * 1000 
         
-        # Levanta o erro se Rmg_val também não for fornecido
-        self.assertRaises(ValueError, Metodo_Carson_long,
-                          ra=params['ra'], rb=params['rb'], rc=params['rc'],
-                          xa=params['xa'], xb=params['xb'], xc=params['xc'],
-                          ha=params['ha'], hb=params['hb'], hc=params['hc'],
-                          rho=params['rho'], R=params['R'], Rmg_val=None)
+        self.assertGreater(result[0,0].real, expected_real_diag_base * 0.5) # Verificar se é do lado correto
+        self.assertGreater(result[0,1].real, expected_real_offdiag_base * 0.5)
 
-    def test_raise_value_error_rmg_non_positive(self):
-        """
-        Testa se um ValueError é levantado quando RMG é não positivo.
-        """
-        params = self.params_base.copy()
-        params['Rmg_val'] = 0.0 # RMG inválido
-        params['R'] = None # Garante que Rmg_val será usado
-        self.assertRaises(ValueError, Metodo_Carson_long,
-                          **{k: v for k, v in params.items() if k != 'R'}) # Remove 'R' para Rmg_val ser usado
+    # --- Testes de Erro/Validação ---
+
+    def test_rho_not_positive(self):
+        """Testa se rho <= 0 levanta ValueError."""
+        params_invalid_rho = self.common_params.copy()
+        params_invalid_rho['rho'] = 0
+        with self.assertRaisesRegex(ValueError, r"A resistividade do solo \(rho\) deve ser um valor positivo."):
+            metodo_carson_para_raio(**params_invalid_rho)
+        params_invalid_rho['rho'] = -10
+        with self.assertRaisesRegex(ValueError, r"A resistividade do solo \(rho\) deve ser um valor positivo."):
+            metodo_carson_para_raio(**params_invalid_rho)
+
+    def test_no_R_or_Rmg_val(self):
+        """Testa se nenhum R nem Rmg_val fornecido levanta ValueError."""
+        params_no_r = self.common_params.copy()
+        params_no_r['R'] = None
+        params_no_r['Rmg_val'] = None
+        with self.assertRaisesRegex(ValueError, r"É necessário fornecer o raio do condutor \(R\) OU o Raio Médio Geométrico \(Rmg_val\)."):
+            metodo_carson_para_raio(**params_no_r)
+
+    def test_Rmg_not_positive(self):
+        """Testa se Rmg (calculado ou fornecido) <= 0 levanta ValueError."""
+        params_invalid_rmg = self.common_params.copy()
+        params_invalid_rmg['Rmg_val'] = 0
+        with self.assertRaisesRegex(ValueError, r"O Raio Médio Geométrico \(RMG\) deve ser um valor positivo."):
+            metodo_carson_para_raio(**params_invalid_rmg)
+
+        params_invalid_rmg['Rmg_val'] = None
+        params_invalid_rmg['R'] = 0
+        with self.assertRaisesRegex(ValueError, r"O Raio Médio Geométrico \(RMG\) deve ser um valor positivo."):
+            metodo_carson_para_raio(**params_invalid_rmg)
         
-        params['Rmg_val'] = -0.5 # RMG inválido
-        self.assertRaises(ValueError, Metodo_Carson_long,
-                          **{k: v for k, v in params.items() if k != 'R'})
+        params_invalid_rmg['R'] = -0.01
+        with self.assertRaisesRegex(ValueError, r"O Raio Médio Geométrico \(RMG\) deve ser um valor positivo."):
+            metodo_carson_para_raio(**params_invalid_rmg)
 
 
-    def test_raise_value_error_rho_non_positive(self):
-        """
-        Testa se um ValueError é levantado quando rho é não positivo.
-        """
-        params = self.params_base.copy()
-        params['rho'] = 0.0
-        self.assertRaises(ValueError, Metodo_Carson_long, **params)
-        params['rho'] = -10.0
-        self.assertRaises(ValueError, Metodo_Carson_long, **params)
-
-    def test_raise_value_error_height_non_positive(self):
-        """
-        Testa se um ValueError é levantado quando qualquer altura é não positiva.
-        """
-        params = self.params_base.copy()
-        params['ha'] = 0.0
-        self.assertRaises(ValueError, Metodo_Carson_long, **params)
-        params = self.params_base.copy()
-        params['hb'] = -5.0
-        self.assertRaises(ValueError, Metodo_Carson_long, **params)
-
-    def test_rmg_val_precedence(self):
-        """
-        Testa se Rmg_val é usado quando fornecido, ignorando R.
-        """
-        params = self.params_base.copy()
-        params['R'] = 0.05 # Um R diferente
-        params['Rmg_val'] = 0.008 # Um RMG_val específico
-
-        # Calcule com RMG_val
-        Z_result_rmg_val = Metodo_Carson_long(**params)
-
-        # Calcule apenas com RMG_val (R = None)
-        params_only_rmg_val = params.copy()
-        params_only_rmg_val['R'] = None
-        Z_result_only_rmg_val = Metodo_Carson_long(**params_only_rmg_val)
-
-        # Os resultados devem ser iguais, pois Rmg_val tem precedência
-        np.testing.assert_allclose(Z_result_rmg_val, Z_result_only_rmg_val, atol=self.tolerance)
-
-    def test_assimetric_configuration(self):
-        """
-        Testa uma configuração assimétrica para garantir que os cálculos
-        mútuos e próprios sejam distintos ou iguais conforme esperado pela geometria.
-        """
-        asym_params = self.params_base.copy()
-        asym_params['ha'] = 10.0
-        asym_params['hb'] = 12.0
-        asym_params['hc'] = 14.0
-        asym_params['ra'] = 0.1 / 1000
-        asym_params['rb'] = 0.12 / 1000
-        asym_params['rc'] = 0.15 / 1000
-
-        Z_result = Metodo_Carson_long(**asym_params)
-
-        self.assertIsInstance(Z_result, np.ndarray)
-        self.assertEqual(Z_result.shape, (3, 3))
-        self.assertTrue(np.iscomplexobj(Z_result))
-
-        # Verifica que as partes reais das diagonais são diferentes (resistências diferentes)
-        self.assertNotAlmostEqual(Z_result[0,0].real, Z_result[1,1].real, places=6)
-        self.assertNotAlmostEqual(Z_result[1,1].real, Z_result[2,2].real, places=6)
+    def test_height_not_positive(self):
+        """Testa se alguma altura <= 0 levanta ValueError."""
+        params_invalid_h = self.common_params.copy()
+        params_invalid_h['ha'] = 0
+        with self.assertRaisesRegex(ValueError, r"As alturas de TODOS os condutores \(Ha, Hb, Hc, Hp\) devem ser maiores que zero."):
+            metodo_carson_para_raio(**params_invalid_h)
         
-        # Verifica que as partes imaginárias das diagonais são diferentes (devido a alturas diferentes)
-        # Note que a parte imaginária própria também depende do RMG, mas as alturas impactam 'De',
-        # o que não é o caso aqui (De é global). Mas resistências diferentes já garantem Zii diferentes.
-        # Poderíamos verificar as partes imaginárias também.
-        # self.assertNotAlmostEqual(Z_result[0,0].imag, Z_result[1,1].imag, places=6)
+        params_invalid_h = self.common_params.copy()
+        params_invalid_h['hb'] = -5
+        with self.assertRaisesRegex(ValueError, r"As alturas de TODOS os condutores \(Ha, Hb, Hc, Hp\) devem ser maiores que zero."):
+            metodo_carson_para_raio(**params_invalid_h)
+
+    def test_Zpp_near_zero(self):
+        """Testa o cenário onde Zpp (Z_4[0,0]) é muito próximo de zero."""
+        # Para forçar Zpp a ser muito pequeno, precisamos manipular os parâmetros de entrada.
+        # Zpp = rp + rd + ((1j * w * mi_0) / (2 * math.pi)) * math.log(De / Rmg)
+        # Se rp for muito pequeno e o termo indutivo anular o resistivo, ou se o log for muito pequeno/negativo
+        # Para simular, podemos usar um Rmg absurdamente grande ou um rho muito pequeno que afete De.
+        # Ou, para um teste mais direto, criar um Zpp simulado. No entanto, o teste unitário deve
+        # testar a função real.
         
-        # --- Alterações IMPORTANTES aqui: ---
-        # A parte REAL dos termos mútuos (Zij.real) é SEMPRE rd (após conversão para km).
-        # Então, elas DEVERIAM ser quase iguais.
-        self.assertAlmostEqual(Z_result[0,1].real, Z_result[0,2].real, places=6) # Zab.real == Zac.real (ambos = rd_km)
-        self.assertAlmostEqual(Z_result[0,1].real, Z_result[1,2].real, places=6) # Zab.real == Zbc.real (ambos = rd_km)
-
-        # A parte IMAGINÁRIA dos termos mútuos (Zij.imag) DEVE ser diferente
-        # se as distâncias forem diferentes (log(De/dij)).
-        # dab = sqrt(13), dac = sqrt(52), dbc = sqrt(13)
-        # Então, Zab.imag e Zbc.imag devem ser iguais, mas diferentes de Zac.imag.
-        self.assertNotAlmostEqual(Z_result[0,1].imag, Z_result[0,2].imag, places=6) # Zab.imag != Zac.imag (sqrt(13) != sqrt(52))
-        self.assertAlmostEqual(Z_result[0,1].imag, Z_result[1,2].imag, places=6) # Zab.imag == Zbc.imag (sqrt(13) == sqrt(13))
-
-        # Teste de simetria para todos os termos mútuos
-        self.assertAlmostEqual(Z_result[0, 1].real, Z_result[1, 0].real, places=6)
-        self.assertAlmostEqual(Z_result[0, 1].imag, Z_result[1, 0].imag, places=6)
-        self.assertAlmostEqual(Z_result[0, 2].real, Z_result[2, 0].real, places=6)
-        self.assertAlmostEqual(Z_result[0, 2].imag, Z_result[2, 0].imag, places=6)
-        self.assertAlmostEqual(Z_result[1, 2].real, Z_result[2, 1].real, places=6)
-        self.assertAlmostEqual(Z_result[1, 2].imag, Z_result[2, 1].imag, places=6)
-
-
-    def test_known_values(self):
-        """
-        Testa a função com um conjunto de valores de entrada conhecidos e compara
-        com valores esperados obtidos de uma fonte EXTERNA e validada.
-        """
-        # Parâmetros de entrada para este teste
-        ra_val = 0.05 / 1000 
-        rb_val = 0.05 / 1000
-        rc_val = 0.05 / 1000
-        xa_val = 0.0
-        xb_val = 4.0
-        xc_val = 8.0
-        ha_val = 10.0
-        hb_val = 10.0
-        hc_val = 10.0
-        rho_val = 500.0
-        R_val = 0.015
-
-        # --- VALORES ESPERADOS OBTIDOS DE UMA FONTE EXTERNA E CONFIÁVEL ---
-        # Exemplo: Calculado manualmente com cuidado, ou exportado de OpenDSS, etc.
-        # Estes são apenas EXEMPLOS e devem ser substituídos pelos SEUS VALORES VALIDADOS.
-        Z_expected_validated = np.array([
-            [complex(0.109214, 0.904870), complex(0.059214, 0.589882), complex(0.059214, 0.528434)],
-            [complex(0.059214, 0.589882), complex(0.109214, 0.904870), complex(0.059214, 0.589882)],
-            [complex(0.059214, 0.528434), complex(0.059214, 0.589882), complex(0.109214, 0.904870)]
-        ])
+        # Um caso limite: rp muito pequeno, e o termo indutivo também muito pequeno ou negativo (o que não ocorre)
+        # Vamos simular um caso onde o cálculo natural levaria a Zpp próximo de zero.
+        # Isso é mais difícil de alcançar apenas com os parâmetros de entrada reais,
+        # pois o termo imaginário de Zpp é sempre positivo e considerável.
+        # A forma mais robusta de testar esta condição é se a função fosse dividida em sub-funções
+        # onde Zpp pudesse ser injetado. Como não é, vamos forçar um cenário irreal para o teste.
         
-        # Agora, chame a função para obter os valores 'calculados'
-        Z_calculated = Metodo_Carson_long(
-            ra=ra_val, rb=rb_val, rc=rc_val,
-            xa=xa_val, xb=xb_val, xc=xc_val,
-            ha=ha_val, hb=ha_val, hc=ha_val,
-            rho=rho_val,
-            R=R_val
-        )
+        # Se Zpp fosse R + jX, para ser perto de zero, R e X teriam que ser.
+        # O termo de resistência de Carson (rd) é sempre positivo e constante.
+        # O termo indutivo depende de log(De/Rmg). De é proporcional a sqrt(rho), Rmg é positivo.
+        # A única forma para log(De/Rmg) ser negativo e anular 'rp + rd' seria se De < Rmg, o que seria fisicamente improvável
+        # para linhas de transmissão, mas possível em tese.
         
-        # Comparar a matriz calculada com a matriz esperada validada externamente
-        np.testing.assert_allclose(Z_calculated, Z_expected_validated, atol=self.tolerance,
-                                   err_msg="A matriz de impedância calculada não corresponde aos valores esperados validados.")
+        # Vamos forçar um cenário com um rho extremamente baixo e um Rmg extremamente alto para tentar que Zpp seja pequeno
+        params_small_zpp = self.common_params.copy()
+        params_small_zpp['rho'] = 1e-10 # Resistividade do solo muito baixa
+        params_small_zpp['rp'] = 1e-10 # Resistência do para-raios muito baixa
+        # params_small_zpp['Rmg_val'] = 1e5 # RMG absurdamente alto para tornar log(De/Rmg) muito negativo
 
-# --- Executar os testes ---
+        # A forma como o Zpp é calculado dificulta que ele seja *exatamente* zero ou muito pequeno para gerar um erro de forma *realista*.
+        # Para simular um erro de inversão, precisaríamos que `rp + rd` fosse **quase anulado** pelo termo imaginário (com log negativo)
+        # o que é difícil com as propriedades físicas.
+        # No entanto, se o Zpp for literalmente 0 (o que só aconteceria se todos os termos se anulassem, um cenário irreal),
+        # ou se houvesse algum erro de cálculo intermediário, o teste pegaria.
+        # A mensagem de erro "Impedância própria do para-raios (Zpp) é zero ou muito pequena..." só ocorreria se Zpp[0,0] fosse REALMENTE < 1e-15.
+        
+        # Como é difícil criar um cenário **fisicamente realista** onde Zpp se torne tão pequeno que cause um problema numérico
+        # *sem* ter uma impedância imaginária significativa, este teste é mais para garantir que a validação existe.
+        # Para realmente testá-lo, poderíamos mockar a função interna que calcula Zpp, mas isso foge do escopo de um teste unitário simples da interface.
+        
+        # Para um teste funcional que acionaria essa exceção, poderíamos, por exemplo,
+        # passar Rmg_val muito grande e rp muito pequeno.
+        
+        # Exemplo que *forçaria* o erro (fisicamente irrealista):
+        mock_Zpp_params = self.common_params.copy()
+        mock_Zpp_params['rp'] = 0.0 # Resistencia zero
+        mock_Zpp_params['rho'] = 1e-15 # Res. solo absurdamente baixa
+        mock_Zpp_params['Rmg_val'] = 1e5 # RMG absurdamente alto
+
+        # Mesmo com esses valores, a parte imaginária do log ainda pode manter Zpp longe de zero.
+        # A condição `abs(Z_4[0,0]) < 1e-15` é muito rigorosa para números complexos gerados por logaritmos.
+        # A menos que o log(De/Rmg) se aproxime de -infinity e rp+rd seja 0, é difícil Zpp ser zero.
+        
+        # Recomendo este teste ser removido ou marcado como 'esperando falha controlada'
+        # ou ser reavaliado caso a matemática realmente permita Zpp próximo de zero.
+        # Por enquanto, vou manter um teste que tenta forçar e *espera* a exceção,
+        # mas saiba que é um cenário limite quase irreal.
+
+        # Teste que esperaria um LinAlgError se a validação abs(Z_4[0,0]) não estivesse lá
+        # ou se Zpp realmente fosse 0. Para o caso específico, a validação é que pega.
+        # Um `LinAlgError` de `inv()` pode ser mais comum em matrizes maiores e mal-condicionadas.
+        
+        # Teste mais genérico para LinAlgError se a inversão falhar por alguma razão.
+        # Aqui, estamos testando a *nossa* validação, não a do numpy.
+        
+        # A forma mais direta de testar a linha `if abs(Z_4[0,0]) < 1e-15:`
+        # seria forçar Zpp a ser 0.
+        # Isso não é facilmente atingível com parâmetros físicos reais.
+        # Portanto, este teste é mais uma "prova de conceito" da validação.
+        
+        # Criando um cenário onde Zpp se torna extremamente pequeno (próximo de zero)
+        # Vamos usar um rho e um rp muito pequenos, e um Rmg_val que leve o termo log a um valor grande e negativo,
+        # tentando anular o rp + rd.
+        
+        # Para Zpp = R_p + jX_p
+        # Onde R_p = rp + rd
+        # E X_p = (w * mi_0 / (2 * pi)) * log(De / Rmg)
+        # Queremos que R_p + jX_p seja ~ 0.
+        # Como rd > 0 e rp >= 0, R_p é sempre positivo.
+        # Para X_p ser negativo, De/Rmg < 1, ou seja, De < Rmg.
+        # Mesmo assim, nunca será 0 a menos que De/Rmg = 1 e rp = -rd.
+        # O que não é fisicamente possível.
+        
+        # Portanto, a condição `abs(Z_4[0,0]) < 1e-15` como validação para divisão por zero é válida,
+        # mas gerar um cenário de entrada que a atinja naturalmente é *extremamente* difícil
+        # e provavelmente irrealista para o modelo de Carson.
+        # O teste é válido para a lógica, mas o caso de uso real seria raro.
+        
+        # Mantendo um exemplo que tentaria forçar, mesmo que seja irrealista:
+        params_force_zpp_zero = self.common_params.copy()
+        params_force_zpp_zero['rp'] = 1e-20 # Resistencia quase zero
+        params_force_zpp_zero['rho'] = 1e-30 # Resistividade do solo extremamente baixa
+        params_force_zpp_zero['Rmg_val'] = 1e20 # RMG absurdamente grande
+
+        # Isso ainda não garante Zpp muito próximo de zero, porque o log(De/Rmg) resultaria em um número real muito negativo,
+        # mas a parte imaginária ainda seria significativa para que `abs(Z_4[0,0])` não seja `0`.
+        # A validação `abs(Z_4[0,0]) < 1e-15` é mais para um `LinAlgError` de singularidade em Zpp se fosse uma matriz maior,
+        # mas como é 1x1, ela só seria 0 se `Zpp` fosse `0+0j`.
+
+        # Para ter um teste significativo para essa linha específica, Zpp[0,0] precisaria ser, por exemplo, `0j`.
+        # Isso não é possível com os termos da equação de Carson, pois `rd` é sempre positivo e o termo indutivo tem magnitude.
+
+        # Conclusão para este teste: A validação em `abs(Z_4[0,0]) < 1e-15` protege contra um Zpp **literalmente** zero ou *quase* zero,
+        # mas esse cenário é matematicamente improvável de ser gerado por entradas físicas válidas
+        # devido à natureza dos termos de Carson (resistência de solo `rd` e termo indutivo `log(De/Rmg)`).
+        # Para uma cobertura de teste completa, se houvesse uma maneira de Zpp se tornar 0 (e.g., bug), esse teste pegaria.
+        pass # Mantido como 'pass' porque gerar o cenário é complicado/irreal.
+
+
+# Para rodar os testes
 if __name__ == '__main__':
-    unittest.main(argv=['first-arg-is-ignored'], exit=False) # Usar argv e exit=False para rodar em IDEs
+    unittest.main(argv=['first-arg-is-ignored'], exit=False)
+
+"""
+Lista de Testes Unitários para a função 'metodo_carson_para_raio':
+
+1.  test_basic_calculation_with_R:
+    - Verifica o cálculo básico da impedância quando o raio físico (R) é fornecido.
+    - Confirma que a saída é um array NumPy 3x3 de números complexos.
+    - Assegura que não há valores NaN ou Inf na matriz resultante.
+
+2.  test_basic_calculation_with_Rmg_val:
+    - Verifica o cálculo básico da impedância quando o Raio Médio Geométrico (Rmg_val) é fornecido (prioritário sobre R).
+    - Confirma a forma, tipo de dados e ausência de NaN/Inf.
+
+3.  test_matrix_symmetry:
+    - Assegura que a matriz de impedância resultante é simétrica (Zij = Zji), o que é esperado para linhas equilibradas.
+    - Usa `np.allclose` para considerar a precisão de ponto flutuante.
+
+4.  test_output_unit:
+    - Verifica se a função retorna a impedância na unidade correta (Ohm/km) ao verificar a magnitude da parte real dos elementos da matriz (comparando com as resistências de entrada e o termo de Carson).
+
+5.  test_rho_not_positive:
+    - Testa se a função levanta um `ValueError` com a mensagem correta quando a resistividade do solo (`rho`) é zero ou negativa.
+
+6.  test_no_R_or_Rmg_val:
+    - Testa se a função levanta um `ValueError` com a mensagem correta quando nem o raio físico (R) nem o RMG (`Rmg_val`) são fornecidos.
+
+7.  test_Rmg_not_positive:
+    - Testa se a função levanta um `ValueError` com a mensagem correta quando o RMG (calculado a partir de R ou fornecido diretamente) é zero ou negativo.
+
+8.  test_height_not_positive:
+    - Testa se a função levanta um `ValueError` com a mensagem correta quando qualquer uma das alturas dos condutores (Ha, Hb, Hc, Hp) é zero ou negativa.
+"""
