@@ -20,7 +20,7 @@ Afazeres:
 		- Criar teste unitário para todas as funções:
 			- Longitudinais
 				- Carson com correção
-				- Carson com para-raio
+				- Carson com para-raio <-
 				- Transposição
 				- Feixe de condutores
 				- sintese
@@ -60,7 +60,6 @@ Afazeres:
 
 		- Criar default teste todas as janelas:
 			- Longitudinais
-				- Carson com para-raio
 				- Transposição
 				- Feixe de condutores
 				- sintese
