@@ -32,13 +32,6 @@ from Transversais.transposicao import metodo_transposicao_tran
 from Transversais.feixe_condutor import metodo_feixe_condutor_tran
 from Transversais.capacitancia_de_sequencia import metodo_capacitancia_sequencia_tran
 
-import numpy as np
-from tkinter import Toplevel, Frame, Button, Label, Entry, END, CENTER, messagebox, Scrollbar # Importar Tkinter corretamente
-from tkinter import ttk # Para Treeview
-
-# Assumindo que 'metodo_imagem_long' está disponível (do seu módulo ou definido em outro lugar)
-# from longitudinais.imagem import metodo_imagem_long
-
 # --- Classe para a Tela de Cálculo do Método das Imagens Longitudinais ---
 class LongitudinalImageCalculator:
     def __init__(self, master_window):
@@ -579,7 +572,7 @@ class CarsonLongitudinalCalculator:
                 row_values.append(formatted_value)
             self.lista_CAP.insert("", END, text=row_label, values=tuple(row_values))
 
-# --- A função 'metodo_carson_para_raio' deve ser importada ou definida em outro lugar acessível ---
+# --- Classe para a Tela de Cálculo do Método de Carson com Cabo Para_raio e redução de Kron Longitudinais ---
 class CarsonGroundWireCalculator:
     def __init__(self, master_window):
         self.master_window = master_window
@@ -753,9 +746,9 @@ class CarsonGroundWireCalculator:
         self.hp_entry.delete(0, END)
         
         # Inserindo os valores default novamente após a limpeza
-        self.ra_entry.insert(0, "0.1") # Ajustado
-        self.rb_entry.insert(0, "0.1") # Ajustado
-        self.rc_entry.insert(0, "0.1") # Ajustado
+        self.ra_entry.insert(0, "0.1")
+        self.rb_entry.insert(0, "0.1")
+        self.rc_entry.insert(0, "0.1")
         self.rp_entry.insert(0, "0.15")
         self.r_entry.insert(0, "0.012")
         # self.rmg_entry.insert(0, "0.0096") # Se usar RMG default

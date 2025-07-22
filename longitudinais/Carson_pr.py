@@ -332,8 +332,8 @@ class TestMetodoCarsonParaRaio(unittest.TestCase):
 
 
 # Para rodar os testes
-if __name__ == '__main__':
-    unittest.main(argv=['first-arg-is-ignored'], exit=False)
+#if __name__ == '__main__':
+#    unittest.main(argv=['first-arg-is-ignored'], exit=False)
 
 """
 Lista de Testes Unitários para a função 'metodo_carson_para_raio':
